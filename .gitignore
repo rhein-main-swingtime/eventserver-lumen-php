@@ -1,0 +1,8 @@
+/vendor
+/.idea
+.env
+.phpunit.result.cache
+.DS_Store
+storage/credentials/
+storage/calendars/*
+launch.json
