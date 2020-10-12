@@ -69,7 +69,7 @@ class ImportController extends Controller
             $val = $dateTime;
         }
 
-        return (new \DateTimeImmutable($val))->format('Y-m-d H:i:s');
+        return (new \DateTimeImmutable($val))->format(CalendarEvent::DATE_TIME_FORMAT);
     }
 
     /**
