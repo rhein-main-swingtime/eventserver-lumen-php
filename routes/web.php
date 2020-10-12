@@ -17,5 +17,17 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
-$router->post('import', ['uses' => 'ImportController@ImportAll']);
-$router->get('events[/{category}]', ['uses' => 'EventsController@ShowEvents']);
+$router->post(
+    'import',
+    ['uses' => 'ImportController@ImportAll']
+);
+
+$router->get(
+    'search/{search}[/{limit:[0-9]+}]',
+    ['uses' => 'SearchController@runTextSearch']
+);
+
+$router->get(
+    'events[/{category}]',
+    ['uses' => 'EventsController@ShowEvents']
+);

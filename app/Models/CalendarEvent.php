@@ -13,6 +13,8 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
 {
     use Authenticatable, Authorizable, HasFactory;
 
+    public const DATE_TIME_FORMAT = 'Y-m-d H:i:s';
+
     /**
      * The primary key associated with the table.
      *
@@ -55,4 +57,5 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
     protected $hidden = [
         // 'password',
     ];
+
 }
