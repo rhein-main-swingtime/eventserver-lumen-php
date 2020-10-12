@@ -1,5 +1,7 @@
 # RMSwing DanceEvent API
 
+Lorem Ipsum
+
 Based on:
     - Lumen Framework
     - MariaDB or MySQL
