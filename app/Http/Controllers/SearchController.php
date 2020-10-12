@@ -19,8 +19,10 @@ class SearchController extends Controller
             response()->json(['result' => null]);
         }
 
-        $query =  CalendarEvent::where('description', 'like', '%'.$search.'%')
-            ->orWhere('summary', 'like', '%'.$search.'%')
+        $search = \urldecode($search);
+
+        $query =  CalendarEvent::where('description', 'like', "%{$search}%")
+            ->orWhere('summary', 'like', "%{$search}%")
             ->where('endDateTime', '>', (new \DateTimeImmutable())->format(CalendarEvent::DATE_TIME_FORMAT));
 
         if ($limit > 0) {
