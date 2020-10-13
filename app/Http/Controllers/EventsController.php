@@ -20,7 +20,7 @@ class EventsController extends Controller
 
     protected function validateRequest(Request $request): void {
         $this->validate($request, [
-            'skip'      => 'integer|required_with:limit|min:0',
+            'skip'      => 'integer|min:0',
             'city'      => 'alpha_dash',
             'limit'     => 'integer|min:1',
             'calendar'  => 'alpha_dash',
