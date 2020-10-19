@@ -23,12 +23,11 @@ class SearchController extends Controller
 
         $query =  CalendarEvent::where('description', 'like', "%{$search}%")
             ->orWhere('summary', 'like', "%{$search}%")
-            ->where('endDateTime', '>', (new \DateTimeImmutable())->format(CalendarEvent::DATE_TIME_FORMAT));
+            ->where('endDateTime', '>', (new \DateTimeImmutable())->format(CalendarEvent::DATE_TIME_FORMAT_DB));
 
         if ($limit > 0) {
             $query->limit($limit);
         }
-
 
         return response()->json(
             [

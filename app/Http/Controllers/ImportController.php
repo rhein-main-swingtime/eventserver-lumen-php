@@ -55,24 +55,6 @@ class ImportController extends Controller
     }
 
     /**
-     * Formates Dates for insertion into DB
-     *
-     * @param string|Google_DateTime $dateTime  Datetime
-     * @return string
-     */
-    private function formatDateForDB($dateTime): string
-    {
-
-        if (gettype($dateTime) !== 'string') {
-            $val = $dateTime->getDateTime() ?? $dateTime->getDate();
-        } else {
-            $val = $dateTime;
-        }
-
-        return (new \DateTimeImmutable($val))->format(CalendarEvent::DATE_TIME_FORMAT);
-    }
-
-    /**
      * Removes outdated entries
      *
      * @param string        $calendar  Calendar
@@ -137,27 +119,28 @@ class ImportController extends Controller
             /** @var \Google_Service_Calendar_Event $nextEvent */
             while ($nextEvent = $events->next()) {
                 try {
-
                     $id = $nextEvent->getId();
                     $updatedIDs[] = $id;
 
                     CalendarEvent::updateOrCreate(
                         [
                             'id' => $id,
-                            'updated' => $this->formatDateForDB($nextEvent->getUpdated())
+                            'updated' => $nextEvent->getUpdated()
                         ],
                         [
                             'summary' => $nextEvent->getSummary(),
                             'description' => $nextEvent->getDescription() ?? '',
-                            'created' => $this->formatDateForDB($nextEvent->getCreated()),
+                            'created' => $nextEvent->getCreated(),
                             'creator' => $nextEvent->getCreator()->getEmail(),
                             'location' => $nextEvent->getLocation(),
                             'category' => $data['category'],
-                            'startDateTime' => $this->formatDateForDB($nextEvent->getStart()),
-                            'endDateTime' => $this->formatDateForDB($nextEvent->getEnd()),
+                            'start_date_time' => $nextEvent->getStart(),
+                            'end_date_time' => $nextEvent->getEnd(),
                             'calendar' => $name,
                             'city' => $this->retrieveCity(
-                                $nextEvent->getLocation() . ' ' . $nextEvent->getSummary() . ' ' . $nextEvent->getDescription()
+                                $nextEvent->getLocation()
+                                . ' ' . $nextEvent->getSummary()
+                                . ' ' . $nextEvent->getDescription()
                             )
                         ]
                     );

@@ -27,6 +27,13 @@ class EventsController extends Controller
         ]);
     }
 
+    /**
+     * fetchEvents
+     *
+     * @param  Request $request
+     * @param  string $category
+     * @return Illuminate\Database\Eloquent\Collection
+     */
     protected function fetchEvents(Request $request, string $category = ''): \Illuminate\Database\Eloquent\Collection
     {
 
@@ -46,6 +53,8 @@ class EventsController extends Controller
         }
 
         $eventQuery->where($where);
+        $eventQuery->whereDate('end_date_time', '>=', date('Y-m-d i:m:s'));
+        $eventQuery->orderBy('start_date_time', 'ASC');
 
         if ($limit > 0) {
             $eventQuery->limit($limit);
@@ -110,10 +119,11 @@ class EventsController extends Controller
 
         return response()->json([
             'danceEvents'   => $this->fetchEvents($request, $category),
-            'categories'    => $this->fetchCategories(),
-            'calendars'     => $this->fetchCalendars(),
-            'cities'        => $this->fetchCities(),
-        ]
-        );
+            'filters' => [
+                'categories'    => $this->fetchCategories(),
+                'calendars'     => $this->fetchCalendars(),
+                'cities'        => $this->fetchCities(),
+            ]
+        ]);
     }
 }
