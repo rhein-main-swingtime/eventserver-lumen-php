@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\CalendarEvent;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 
 class EventsController extends Controller
 {
+
+    private $queries = [];
 
     /**
      * Create a new controller instance.
@@ -20,10 +24,11 @@ class EventsController extends Controller
 
     protected function validateRequest(Request $request): void {
         $this->validate($request, [
-            'skip'      => 'integer|min:0',
-            'city'      => 'alpha_dash',
-            'limit'     => 'integer|min:1',
-            'calendar'  => 'alpha_dash',
+            'skip'          => 'integer|min:0',
+            'cities'        => 'array',
+            'limit'         => 'integer|min:1',
+            'calendars'     => 'array',
+            'categories'    => 'array',
         ]);
     }
 
@@ -31,40 +36,38 @@ class EventsController extends Controller
      * fetchEvents
      *
      * @param  Request $request
-     * @param  string $category
      * @return Illuminate\Database\Eloquent\Collection
      */
-    protected function fetchEvents(Request $request, string $category = ''): \Illuminate\Database\Eloquent\Collection
+    protected function fetchEvents(Request $request): \Illuminate\Database\Eloquent\Collection
     {
 
         $limit = (int) $request->input('limit');
         $skip = (int) $request->input('skip');
 
-        $eventQuery = (new CalendarEvent())->newQuery();
+        $categories = $request->input('categories');
+        $cities = $request->input('cities');
+        $calendars = $request->input('calendars');
 
-        $where = [];
+        $query = (new CalendarEvent())
+            ->when($categories, function ($query, $categories) {
+                $query->wherein('category', $categories);
+            })
+            ->when($cities, function ($query, $cities) {
+                $query->wherein('city', $cities);
+            })
+            ->when($calendars, function ($query, $calendars) {
+                $query->wherein('calendar', $calendars);
+            })
+            ->when($limit > 0, function ($query, $limit) {
+                $query->limit($limit);
+            })
+            ->when($skip > 0, function ($query, $skip) {
+                $query->skip($skip);
+            })
+            ->whereDate('end_date_time', '>=', date('Y-m-d i:m:s'))
+            ->orderBy('start_date_time', 'ASC');
 
-        if ($category !== '') {
-            $where['category'] = $category;
-        }
-
-        if ($request->input('city') !== null) {
-            $where['city'] = $request->input('city');
-        }
-
-        $eventQuery->where($where);
-        $eventQuery->whereDate('end_date_time', '>=', date('Y-m-d i:m:s'));
-        $eventQuery->orderBy('start_date_time', 'ASC');
-
-        if ($limit > 0) {
-            $eventQuery->limit($limit);
-        }
-
-        if ($skip > 0) {
-            $eventQuery->skip($skip);
-        }
-
-        return $eventQuery->get();
+        return $query->get();
 
     }
 
@@ -110,6 +113,17 @@ class EventsController extends Controller
         );
     }
 
+    public function returnFilters(Request $request)
+    {
+        return response()->json(
+            [
+                'categories'    => $this->fetchCategories(),
+                'calendars'     => $this->fetchCalendars(),
+                'cities'        => $this->fetchCities(),
+            ]
+        );
+    }
+
     /**
      * Shows Events
      */
@@ -119,11 +133,6 @@ class EventsController extends Controller
 
         return response()->json([
             'danceEvents'   => $this->fetchEvents($request, $category),
-            'filters' => [
-                'categories'    => $this->fetchCategories(),
-                'calendars'     => $this->fetchCalendars(),
-                'cities'        => $this->fetchCities(),
-            ]
         ]);
     }
 }

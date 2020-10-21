@@ -28,6 +28,11 @@ $router->get(
 );
 
 $router->get(
-    'events[/{category}]',
+    'events',
     ['uses' => 'EventsController@ShowEvents']
+);
+
+$router->get(
+    'filters',
+    ['uses' => 'EventsController@ReturnFilters']
 );
