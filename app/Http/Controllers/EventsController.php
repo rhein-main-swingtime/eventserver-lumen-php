@@ -118,8 +118,8 @@ class EventsController extends Controller
         return response()->json(
             [
                 'categories'    => $this->fetchCategories(),
-                'calendars'     => $this->fetchCalendars(),
                 'cities'        => $this->fetchCities(),
+                'calendars'     => $this->fetchCalendars(),
             ]
         );
     }
