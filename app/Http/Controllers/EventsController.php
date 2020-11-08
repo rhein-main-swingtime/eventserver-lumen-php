@@ -58,10 +58,10 @@ class EventsController extends Controller
             ->when($calendars, function ($query, $calendars) {
                 $query->wherein('calendar', $calendars);
             })
-            ->when($limit > 0, function ($query, $limit) {
+            ->when($limit, function ($query, $limit) {
                 $query->limit($limit);
             })
-            ->when($skip > 0, function ($query, $skip) {
+            ->when($skip, function ($query, $skip) {
                 $query->skip($skip);
             })
             ->whereDate('end_date_time', '>=', date('Y-m-d i:m:s'))
