@@ -78,18 +78,19 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
      * @var mixed[]
      */
     protected $fillable = [
-        'id',
-        'summary',
-        'description',
-        'start_date_time',
-        'end_date_time',
-        'updated',
+        'calendar',
+        'category',
+        'city',
         'created',
         'creator',
-        'calendar',
+        'description',
+        'end_date_time',
+        'event_id',
+        'id',
         'location',
-        'category',
-        'city'
+        'start_date_time',
+        'summary',
+        'updated',
     ];
 
     protected $dates = [

@@ -64,7 +64,7 @@ class ImportController extends Controller
     private function removeOutdated(string $calendar, array $ids): int
     {
         return CalendarEvent::where('calendar', $calendar)
-            ->whereNotIn('id', $ids)
+            ->whereNotIn('event_id', $ids)
             ->delete();
     }
 
@@ -119,17 +119,18 @@ class ImportController extends Controller
             /** @var \Google_Service_Calendar_Event $nextEvent */
             while ($nextEvent = $events->next()) {
                 try {
-                    $id = $nextEvent->getId();
-                    $updatedIDs[] = $id;
+                    $event_id = $nextEvent->getId();
+                    $updatedIDs[] = $event_id;
 
                     CalendarEvent::updateOrCreate(
                         [
-                            'id' => $id,
+                            'event_id' => $event_id,
                             'updated' => $nextEvent->getUpdated()
                         ],
                         [
                             'summary' => $nextEvent->getSummary(),
                             'description' => $nextEvent->getDescription() ?? '',
+                            'event_id' => $event_id,
                             'created' => $nextEvent->getCreated(),
                             'creator' => $nextEvent->getCreator()->getEmail(),
                             'location' => $nextEvent->getLocation(),
@@ -141,7 +142,8 @@ class ImportController extends Controller
                                 $nextEvent->getLocation()
                                 . ' ' . $nextEvent->getSummary()
                                 . ' ' . $nextEvent->getDescription()
-                            )
+                            ),
+                            'reccurence' => $nextEvent->getRecurringEventId() ?? ''
                         ]
                     );
 

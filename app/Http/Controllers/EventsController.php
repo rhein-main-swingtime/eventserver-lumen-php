@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\Event;
 use App\Models\CalendarEvent;
+use DateTime;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
@@ -11,6 +14,8 @@ class EventsController extends Controller
 {
 
     private $queries = [];
+
+    private const DEFAULT_LIMIT = 25;
 
     /**
      * Create a new controller instance.
@@ -24,8 +29,8 @@ class EventsController extends Controller
 
     protected function validateRequest(Request $request): void {
         $this->validate($request, [
-            'skip'          => 'integer|min:0',
             'cities'        => 'array',
+            'skip'          => 'integer|min:1',
             'limit'         => 'integer|min:1',
             'calendars'     => 'array',
             'categories'    => 'array',
@@ -41,12 +46,31 @@ class EventsController extends Controller
     protected function fetchEvents(Request $request): \Illuminate\Database\Eloquent\Collection
     {
 
-        $limit = (int) $request->input('limit');
+        $limit = (
+            $request->input('limit') === null
+            ? self::DEFAULT_LIMIT
+            : (int) $request->input('limit')
+        );
+
         $skip = (int) $request->input('skip');
 
         $categories = $request->input('categories');
         $cities = $request->input('cities');
         $calendars = $request->input('calendars');
+
+        $startDate = $request->input('startDate');
+        if ($startDate === null) {
+            $startDate = (new DateTime('today'))->setTime(0, 0, 0);
+        } else {
+            $startDate = (new DateTime($startDate));
+        }
+
+        $endDate = $request->input('endDate');
+        if ($endDate === null) {
+            $endDate = (new DateTime('last day of this month'))->setTime(23, 59, 59);
+        } else {
+            $endDate = (new DateTime($endDate));
+        }
 
         $query = (new CalendarEvent())
             ->when($categories, function ($query, $categories) {
@@ -58,14 +82,14 @@ class EventsController extends Controller
             ->when($calendars, function ($query, $calendars) {
                 $query->wherein('calendar', $calendars);
             })
-            ->when($limit, function ($query, $limit) {
-                $query->limit($limit);
-            })
-            ->when($skip, function ($query, $skip) {
-                $query->skip($skip);
-            })
-            ->whereDate('end_date_time', '>=', date('Y-m-d i:m:s'))
+            ->whereDate('start_date_time', '>=', $startDate->format(CalendarEvent::DATE_TIME_FORMAT_DB))
             ->orderBy('start_date_time', 'ASC');
+
+        if ($skip > 0) {
+            $query->skip($skip);
+        }
+
+        $query->limit($limit);
 
         return $query->get();
 
@@ -124,6 +148,16 @@ class EventsController extends Controller
         );
     }
 
+    public function addDateMapping(Collection $danceEvents): \Illuminate\Support\Collection
+    {
+        $datesCollection = $danceEvents->mapToGroups(function($item, $key) {
+            $startDate = (new \DateTimeImmutable($item['start_date_time']))->format('Y-m-d');
+            return [$startDate => (int) $item['id']];
+        });
+
+        return $datesCollection;
+    }
+
     /**
      * Shows Events
      */
@@ -131,8 +165,22 @@ class EventsController extends Controller
     {
         $this->validateRequest($request);
 
+        // $danceEvents = $this->fetchEvents($request, $category)->mapWithKeys(function($item) {
+        //     $id = (integer) $item['id'];
+        //     return [$id => $item];
+        // });
+
+        $danceEvents = $this->fetchEvents($request, $category);
+        $dates = $this->addDateMapping($danceEvents);
+
         return response()->json([
-            'danceEvents'   => $this->fetchEvents($request, $category),
+            'danceEvents'   => $danceEvents,
+            'dates'         => $dates,
+            // 'filters'       => [
+            //     'categories'    => $this->fetchCategories(),
+            //     'cities'        => $this->fetchCities(),
+            //     'calendars'     => $this->fetchCalendars(),
+            // ]
         ]);
     }
 }
