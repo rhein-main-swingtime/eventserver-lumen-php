@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\CalendarEvent;
+use App\Models\EventInstance;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
@@ -21,9 +21,9 @@ class SearchController extends Controller
 
         $search = \urldecode($search);
 
-        $query =  CalendarEvent::where('description', 'like', "%{$search}%")
+        $query = EventInstance::where('description', 'like', "%{$search}%")
             ->orWhere('summary', 'like', "%{$search}%")
-            ->where('endDateTime', '>', (new \DateTimeImmutable())->format(CalendarEvent::DATE_TIME_FORMAT_DB));
+            ->where('endDateTime', '>', (new \DateTimeImmutable())->format(EventInstance::DATE_TIME_FORMAT_DB));
 
         if ($limit > 0) {
             $query->limit($limit);
