@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\EventInstance;
 use App\Models\CalendarEvent;
 use Illuminate\Http\Request;
 use App\Providers\GoogleCalendarServiceProvider;
@@ -57,14 +58,20 @@ class ImportController extends Controller
     /**
      * Removes outdated entries
      *
-     * @param string        $calendar  Calendar
-     * @param string[]       $ids        IDs
+     * @param string    $eventId    Event ID
+     * @param string[]  $ids        Instance IDs
      * @return int
      */
-    private function removeOutdated(string $calendar, array $ids): int
+    private function removeOutdatedInstances(string $eventId, array $ids): int
     {
-        return CalendarEvent::where('calendar', $calendar)
-            ->whereNotIn('event_id', $ids)
+        return EventInstance::where('event_id', $eventId)
+            ->whereNotIn('instance_id', $ids)
+            ->delete();
+    }
+
+    private function removeOutdatedEvents(array $eventIDs): int
+    {
+        return CalendarEvent::whereNotIn('event_id', $eventIDs)
             ->delete();
     }
 
@@ -87,7 +94,26 @@ class ImportController extends Controller
         }
 
         return 'Andere';
+    }
 
+    private function getCreator($event): string
+    {
+
+        $name = '';
+        $creator = $event->getCreator();
+
+        if ($creator === null) {
+            return $name;
+        }
+
+        try {
+            $name .= $creator->getDisplayName();
+            $name .= ' <' . $creator->getEmail() . '>';
+        } catch (\Exception $e) {
+            return $name;
+        }
+
+        return $name;
     }
 
     /**
@@ -98,65 +124,109 @@ class ImportController extends Controller
     public function importAll(): \Illuminate\Http\JsonResponse
     {
 
-        $updated = 0;
-        $deleted = 0;
+        $updated = [
+            'instances' => 0,
+            'events' => 0,
+        ];
+        $deleted = [
+            'instances' => 0,
+            'events' => 0,
+        ];
         $status = 200;
         $errors = [];
+        $updatedEventIDs = [];
 
         $paramters = [
             'maxResults' => 2500,
-            'orderBy' => 'startTime',
-            'singleEvents' => true,
+            'singleEvents' => false,
             'timeMin' => (new \DateTimeImmutable('now'))->format('Y-m-d\TH:i:sP'),
             'timeMax'=> (new \DateTimeImmutable('+2 year'))->format('Y-m-d\TH:i:sP'),
         ];
 
+
         foreach ($this->getSources() as $name => $data) {
-            $events = $this->googleCalendar->events->listEvents($data['id'], $paramters);
+            $eventList = $this->googleCalendar->events->listEvents($data['id'], $paramters);
 
-            $updatedIDs = [];
+            foreach ($eventList as $event) {
+                $eventId = $event->getId();
+                $recurrence = $event->getRecurrence();
+                if (gettype($recurrence) === 'array') {
+                    $recurrence = implode(' | ', $recurrence);
+                }
 
-            /** @var \Google_Service_Calendar_Event $nextEvent */
-            while ($nextEvent = $events->next()) {
+                $updatedInstanceIDs = [];
+                $instances = $this->googleCalendar->events->instances($data['id'], $event->getId());
+
                 try {
-                    $event_id = $nextEvent->getId();
-                    $updatedIDs[] = $event_id;
-
                     CalendarEvent::updateOrCreate(
                         [
-                            'event_id' => $event_id,
-                            'updated' => $nextEvent->getUpdated()
+                            'event_id' => $eventId,
                         ],
                         [
-                            'summary' => $nextEvent->getSummary(),
-                            'description' => $nextEvent->getDescription() ?? '',
-                            'event_id' => $event_id,
-                            'created' => $nextEvent->getCreated(),
-                            'creator' => $nextEvent->getCreator()->getEmail(),
-                            'location' => $nextEvent->getLocation(),
-                            'category' => $data['category'],
-                            'start_date_time' => $nextEvent->getStart(),
-                            'end_date_time' => $nextEvent->getEnd(),
-                            'calendar' => $name,
-                            'city' => $this->retrieveCity(
-                                $nextEvent->getLocation()
-                                . ' ' . $nextEvent->getSummary()
-                                . ' ' . $nextEvent->getDescription()
-                            ),
-                            'reccurence' => $nextEvent->getRecurringEventId() ?? ''
+                            'event_id'      => $eventId,
+                            'creator'       => $this->getCreator($event),
+                            'calendar'      => $name,
+                            'category'      => $data['category'],
+                            'updated'       => $event->getUpdated(),
+                            'created'       => $event->getCreated(),
+                            'recurrence'    => $recurrence
                         ]
                     );
-
-                    $updated++;
+                    $updatedEventIDs[] = $eventId;
+                    $updated['events']++;
                 } catch (\Exception $e) {
                     $errors[] = [
                         'message' => $e->getMessage(),
                         'code' => $e->getCode()
                     ];
                     $status = 500;
+                    continue;
+                }
+
+                foreach ($instances->getItems() as $instance) {
+                    try {
+                        $instance_id = $instance->getId();
+                        $updatedInstanceIDs[] = $instance_id;
+                        $instance->getRecurrence();
+                        EventInstance::updateOrCreate(
+                            [
+                                'instance_id' => $instance_id,
+                                'event_id'    => $eventId,
+                            ],
+                            [
+                                'instance_id'       => $instance_id,
+                                'event_id'          => $eventId,
+                                'summary'           => $instance->getSummary(),
+                                'description'       => $instance->getDescription() ?? '',
+                                'location'          => $instance->getLocation(),
+                                'start_date_time'   => $instance->getStart(),
+                                'end_date_time'     => $instance->getEnd(),
+                                'city'              => $this->retrieveCity(
+                                    $instance->getLocation()
+                                    . ' ' . $instance->getSummary()
+                                    . ' ' . $instance->getDescription()
+                                ),
+                            ]
+                        );
+                        $updated['instances']++;
+                    } catch (\Exception $e) {
+                        $errors[] = [
+                            'message' => $e->getMessage(),
+                            'code' => $e->getCode()
+                        ];
+                        $status = 500;
+                    }
+                }
+
+                if (count($updatedInstanceIDs)) {
+                    $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
                 }
             }
-            $deleted += $this->removeOutdated($name, $updatedIDs);
+
+        }
+
+        if (count($updatedEventIDs)) {
+            $deleted['events'] += $this->removeOutdatedEvents($updatedEventIDs);
         }
 
         return response()->json([

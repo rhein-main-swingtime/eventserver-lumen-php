@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\Event;
 use App\Models\CalendarEvent;
+use App\Models\EventInstance;
 use DateTime;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -27,7 +28,8 @@ class EventsController extends Controller
         //
     }
 
-    protected function validateRequest(Request $request): void {
+    protected function validateRequest(Request $request): void
+    {
         $this->validate($request, [
             'cities'        => 'array',
             'skip'          => 'integer|min:1',
@@ -72,7 +74,8 @@ class EventsController extends Controller
             $endDate = (new DateTime($endDate));
         }
 
-        $query = (new CalendarEvent())
+        $query = (new EventInstance())
+            ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
             ->when($categories, function ($query, $categories) {
                 $query->wherein('category', $categories);
             })
@@ -82,7 +85,7 @@ class EventsController extends Controller
             ->when($calendars, function ($query, $calendars) {
                 $query->wherein('calendar', $calendars);
             })
-            ->whereDate('start_date_time', '>=', $startDate->format(CalendarEvent::DATE_TIME_FORMAT_DB))
+            ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB))
             ->orderBy('start_date_time', 'ASC');
 
         if ($skip > 0) {
@@ -92,7 +95,6 @@ class EventsController extends Controller
         $query->limit($limit);
 
         return $query->get();
-
     }
 
     /**
@@ -131,7 +133,7 @@ class EventsController extends Controller
     protected function fetchCities(): array
     {
         return array_values(
-            CalendarEvent::distinct('city')
+            EventInstance::distinct('city')
             ->pluck('city')
             ->toArray()
         );
@@ -150,7 +152,7 @@ class EventsController extends Controller
 
     public function addDateMapping(Collection $danceEvents): \Illuminate\Support\Collection
     {
-        $datesCollection = $danceEvents->mapToGroups(function($item, $key) {
+        $datesCollection = $danceEvents->mapToGroups(function ($item, $key) {
             $startDate = (new \DateTimeImmutable($item['start_date_time']))->format('Y-m-d');
             return [$startDate => (int) $item['id']];
         });

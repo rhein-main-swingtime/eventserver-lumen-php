@@ -51,9 +51,11 @@ use phpDocumentor\Reflection\DocBlock\Tags\Formatter;
  * @property string $start_date_time
  * @property string $end_date_time
  * @property string $event_id
- * @method static \Illuminate\Database\Eloquent\Builder|CalendarEvent whereEventId($value)
+ * @property string|null $instance_id
+ * @method static \Illuminate\Database\Eloquent\Builder|EventInstance whereEventId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|EventInstance whereInstanceId($value)
  */
-class CalendarEvent extends Model implements AuthenticatableContract, AuthorizableContract
+class EventInstance extends Model implements AuthenticatableContract, AuthorizableContract
 {
     use Authenticatable, Authorizable, HasFactory;
 
@@ -65,7 +67,7 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
      *
      * @var string
      */
-    protected $primaryKey = 'event_id';
+    protected $primaryKey = 'id';
 
     /**
      * The "type" of the auto-incrementing ID.
@@ -80,16 +82,22 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
      * @var mixed[]
      */
     protected $fillable = [
-        'creator',
-        'calendar',
-        'updated',
+        'city',
         'created',
-        'category',
+        'creator',
+        'description',
+        'end_date_time',
         'event_id',
-        'recurrence'
+        'instance_id',
+        'location',
+        'start_date_time',
+        'summary',
+        'updated',
     ];
 
     protected $dates = [
+        'start_date_time',
+        'end_date_time',
         'created',
         'updated'
     ];
@@ -100,5 +108,45 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
      * @var array
      */
     protected $hidden = [];
+
+    private function unfuckDate(Google_Service_Calendar_EventDateTime $value): string
+    {
+
+        $val = $value->getDateTime() ?? $value->getDate();
+        $tz = $value->getTimeZone();
+
+        return (Carbon::parse($val, $tz))->format(self::DATE_TIME_FORMAT_DB);
+
+    }
+
+    public function setStartDateTimeAttribute(Google_Service_Calendar_EventDateTime $value): void
+    {
+        $this->attributes['start_date_time'] = $this->unfuckDate($value);
+    }
+
+    public function getStartDateTimeAttribute(string $start_date_time): string
+    {
+        return (new \DateTime($start_date_time))->format(self::DATE_TIME_FORMAT_JS);
+    }
+
+    public function setEndDateTimeAttribute(Google_Service_Calendar_EventDateTime $value): void
+    {
+        $this->attributes['end_date_time'] = $this->unfuckDate($value);
+    }
+
+    public function getEndDateTimeAttribute(string $end_date_time): string
+    {
+        return (new \DateTime($end_date_time))->format(self::DATE_TIME_FORMAT_JS);
+    }
+
+    public function setUpdatedAttribute(string $updated): void
+    {
+        $this->attributes['updated'] = (Carbon::parse($updated))->format(self::DATE_TIME_FORMAT_DB);
+    }
+
+    public function setCreatedAttribute(string $created): void
+    {
+        $this->attributes['created'] = (Carbon::parse($created))->format(self::DATE_TIME_FORMAT_DB);
+    }
 
 }
