@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\Event;
+use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use DateTime;
 use Illuminate\Database\Eloquent\Collection;
@@ -27,7 +28,8 @@ class EventsController extends Controller
         //
     }
 
-    protected function validateRequest(Request $request): void {
+    protected function validateRequest(Request $request): void
+    {
         $this->validate($request, [
             'cities'        => 'array',
             'skip'          => 'integer|min:1',
@@ -103,7 +105,7 @@ class EventsController extends Controller
     protected function fetchCategories(): array
     {
         return array_values(
-            EventInstance::distinct('category')
+            CalendarEvent::distinct('category')
             ->pluck('category')
             ->toArray()
         );
@@ -117,7 +119,7 @@ class EventsController extends Controller
     protected function fetchCalendars(): array
     {
         return array_values(
-            EventInstance::distinct('calendar')
+            CalendarEvent::distinct('calendar')
             ->pluck('calendar')
             ->toArray()
         );

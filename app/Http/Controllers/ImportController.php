@@ -58,14 +58,20 @@ class ImportController extends Controller
     /**
      * Removes outdated entries
      *
-     * @param string        $calendar  Calendar
-     * @param string[]       $ids        IDs
+     * @param string    $eventId    Event ID
+     * @param string[]  $ids        Instance IDs
      * @return int
      */
-    private function removeOutdated(string $calendar, array $ids): int
+    private function removeOutdatedInstances(string $eventId, array $ids): int
     {
-        return EventInstance::where('calendar', $calendar)
-            ->whereNotIn('event_id', $ids)
+        return EventInstance::where('event_id', $eventId)
+            ->whereNotIn('instance_id', $ids)
+            ->delete();
+    }
+
+    private function removeOutdatedEvents(array $eventIDs): int
+    {
+        return CalendarEvent::whereNotIn('event_id', $eventIDs)
             ->delete();
     }
 
@@ -118,52 +124,69 @@ class ImportController extends Controller
     public function importAll(): \Illuminate\Http\JsonResponse
     {
 
-        $updated = 0;
-        $deleted = 0;
+        $updated = [
+            'instances' => 0,
+            'events' => 0,
+        ];
+        $deleted = [
+            'instances' => 0,
+            'events' => 0,
+        ];
         $status = 200;
         $errors = [];
+        $updatedEventIDs = [];
 
         $paramters = [
             'maxResults' => 2500,
-            // 'orderBy' => 'startTime',
             'singleEvents' => false,
             'timeMin' => (new \DateTimeImmutable('now'))->format('Y-m-d\TH:i:sP'),
             'timeMax'=> (new \DateTimeImmutable('+2 year'))->format('Y-m-d\TH:i:sP'),
         ];
 
-        foreach ($this->getSources() as $name => $data) {
 
+        foreach ($this->getSources() as $name => $data) {
             $eventList = $this->googleCalendar->events->listEvents($data['id'], $paramters);
-            $updatedIDs = [];
 
             foreach ($eventList as $event) {
                 $eventId = $event->getId();
-                $instances = $this->googleCalendar->events->instances($data['id'], $event->getId());
                 $recurrence = $event->getRecurrence();
-
                 if (gettype($recurrence) === 'array') {
                     $recurrence = implode(' | ', $recurrence);
                 }
 
-                CalendarEvent::updateOrCreate(
-                    [
-                        'event_id' => $eventId,
-                    ],
-                    [
-                        'event_id'      => $eventId,
-                        'creator'       => $this->getCreator($event),
-                        'calendar'      => $name,
-                        'category'      => $data['category'],
-                        'updated'       => $event->getUpdated(),
-                        'created'       => $event->getCreated(),
-                        'recurrence'    => $recurrence
-                    ]
-                );
+                $updatedInstanceIDs = [];
+                $instances = $this->googleCalendar->events->instances($data['id'], $event->getId());
+
+                try {
+                    CalendarEvent::updateOrCreate(
+                        [
+                            'event_id' => $eventId,
+                        ],
+                        [
+                            'event_id'      => $eventId,
+                            'creator'       => $this->getCreator($event),
+                            'calendar'      => $name,
+                            'category'      => $data['category'],
+                            'updated'       => $event->getUpdated(),
+                            'created'       => $event->getCreated(),
+                            'recurrence'    => $recurrence
+                        ]
+                    );
+                    $updatedEventIDs[] = $eventId;
+                    $updated['events']++;
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'message' => $e->getMessage(),
+                        'code' => $e->getCode()
+                    ];
+                    $status = 500;
+                    continue;
+                }
 
                 foreach ($instances->getItems() as $instance) {
                     try {
                         $instance_id = $instance->getId();
-                        $updatedIDs[] = $instance_id;
+                        $updatedInstanceIDs[] = $instance_id;
                         $instance->getRecurrence();
                         EventInstance::updateOrCreate(
                             [
@@ -185,8 +208,7 @@ class ImportController extends Controller
                                 ),
                             ]
                         );
-
-                        $updated++;
+                        $updated['instances']++;
                     } catch (\Exception $e) {
                         $errors[] = [
                             'message' => $e->getMessage(),
@@ -195,9 +217,16 @@ class ImportController extends Controller
                         $status = 500;
                     }
                 }
+
+                if (count($updatedInstanceIDs)) {
+                    $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
+                }
             }
 
-            // $deleted += $this->removeOutdated($name, $updatedIDs);
+        }
+
+        if (count($updatedEventIDs)) {
+            $deleted['events'] += $this->removeOutdatedEvents($updatedEventIDs);
         }
 
         return response()->json([
