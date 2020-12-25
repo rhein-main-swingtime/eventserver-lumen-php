@@ -195,7 +195,6 @@ class ImportController extends Controller
                         $status = 500;
                     }
                 }
-
             }
 
             // $deleted += $this->removeOutdated($name, $updatedIDs);
