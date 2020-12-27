@@ -12,6 +12,7 @@ Based on:
   - `php artisan migrate`
   - `php -S localhost:8088 public/index.php` will run a local dev server
   - `tail -f storage/logs/*` will monitor logfiles
+  - `php artisan events:import` will import events from calendar sources
   - Have fun!
 
 # Todos

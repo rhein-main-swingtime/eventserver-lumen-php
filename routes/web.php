@@ -17,11 +17,6 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
-$router->post(
-    'import',
-    ['uses' => 'ImportController@ImportAll']
-);
-
 $router->get(
     'search/{search}[/{limit:[0-9]+}]',
     ['uses' => 'SearchController@runTextSearch']
