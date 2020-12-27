@@ -1,26 +1,34 @@
 <?php
-declare(strict_types=1);
+/**
+ * @package     Product
+ * @author      mAm <mamreezaa@gmail.com>
+ */
 
-namespace App\Http\Controllers;
+namespace App\Console\Commands;
 
+use Illuminate\Console\Command;
+use Google_Service_Calendar;
 use App\Models\EventInstance;
 use App\Models\CalendarEvent;
-use Illuminate\Http\Request;
-use App\Providers\GoogleCalendarServiceProvider;
-use Google_Service;
-use Google_Service_Calendar;
-use RegexIterator;
 
 /**
- * ImportController
- *
- * @todo Import method returns wrong counts, this sucks
- * @todo PHPStan finds errors, somehow related to laravel magic?
- * @todo Extra tables for location and creators would be nice
- *
+ * Class RouteList
+ * @package App\Console\Commands
  */
-class ImportController extends Controller
+class ImportCalendarEvents extends Command
 {
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'events:import';
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Imports events from Calendar Sources.';
 
     /**
      * Calendar Service
@@ -29,8 +37,14 @@ class ImportController extends Controller
      */
     protected $googleCalendar;
 
+    /**
+     * Create a new command instance.
+     *
+     * @return void
+     */
     public function __construct(Google_Service_Calendar $googleCalendar)
     {
+        parent::__construct();
         $this->googleCalendar = $googleCalendar;
     }
 
@@ -41,11 +55,12 @@ class ImportController extends Controller
      */
     protected function getSources(): array
     {
-        $sources = require __DIR__
-                    . '/../../../'
-                    . env('SOURCES_GOOGLE', '');
 
-        if (env('local', false)) {
+        $sources = require __DIR__
+            . '/../../../'
+            . env('SOURCES_GOOGLE');
+
+        if (config('local', false)) {
             $sources['Testcalendar'] = [
                 'id' => 'flehdvi6amllkm5cm2dd62qnoc@group.calendar.google.com',
                 'category' => 'Test'
@@ -121,7 +136,7 @@ class ImportController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function importAll(): \Illuminate\Http\JsonResponse
+    public function importAll(): string
     {
 
         $updated = [
@@ -222,17 +237,29 @@ class ImportController extends Controller
                     $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
                 }
             }
-
         }
 
         if (count($updatedEventIDs)) {
             $deleted['events'] += $this->removeOutdatedEvents($updatedEventIDs);
         }
 
-        return response()->json([
+        return json_encode([
             'updated' => $updated,
             'deleted' => $deleted,
             'errors' => count($errors) > 0 ? $errors : 'none',
-        ], $status);
+        ], JSON_PRETTY_PRINT);
     }
+
+    /**
+     * Execute the console command.
+     *
+     * @param  \App\Support\DripEmailer  $drip
+     * @return mixed
+     */
+    public function handle()
+    {
+        $this->importAll();
+    }
+
+
 }
