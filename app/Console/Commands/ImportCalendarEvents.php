@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Google_Service_Calendar;
 use App\Models\EventInstance;
 use App\Models\CalendarEvent;
+use Log;
 
 /**
  * Class RouteList
@@ -17,6 +18,10 @@ use App\Models\CalendarEvent;
  */
 class ImportCalendarEvents extends Command
 {
+
+    private const STATUS_ERROR = 'error';
+    private const STATUS_SUCCESS = 'success';
+
     /**
      * The name and signature of the console command.
      *
@@ -147,7 +152,7 @@ class ImportCalendarEvents extends Command
             'instances' => 0,
             'events' => 0,
         ];
-        $status = 200;
+        $status = self::STATUS_SUCCESS;
         $errors = [];
         $updatedEventIDs = [];
 
@@ -194,7 +199,7 @@ class ImportCalendarEvents extends Command
                         'message' => $e->getMessage(),
                         'code' => $e->getCode()
                     ];
-                    $status = 500;
+                    $status = self::STATUS_ERROR;
                     continue;
                 }
 
@@ -244,9 +249,10 @@ class ImportCalendarEvents extends Command
         }
 
         return json_encode([
-            'updated' => $updated,
-            'deleted' => $deleted,
-            'errors' => count($errors) > 0 ? $errors : 'none',
+            'status'    => $status,
+            'updated'   => $updated,
+            'deleted'   => $deleted,
+            'errors'    => count($errors) > 0 ? $errors : 'none',
         ], JSON_PRETTY_PRINT);
     }
 
@@ -258,8 +264,13 @@ class ImportCalendarEvents extends Command
      */
     public function handle()
     {
-        $this->importAll();
+        Log::info('Event Import Started');
+        $result = $this->importAll();
+        if ($result['status'] === self::STATUS_ERROR) {
+            Log::error($result);
+        } else {
+            Log::info($result);
+        }
     }
-
 
 }
