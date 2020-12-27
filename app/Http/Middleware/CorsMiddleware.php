@@ -15,7 +15,8 @@ class CorsMiddleware
     public function handle($request, Closure $next)
     {
 
-        $allowed_origin = '*.rmswing.de';
+        $protocol = !empty($_SERVER['HTTPS']) ? 'https://' : 'http://';
+        $allowed_origin = $protocol . 'soontobe.rmswing.de';
 
         if (in_array(
             $_SERVER['REMOTE_ADDR'],
@@ -32,8 +33,7 @@ class CorsMiddleware
             'Access-Control-Allow-Headers'     => 'Content-Type, Authorization, X-Requested-With'
         ];
 
-        if ($request->isMethod('OPTIONS'))
-        {
+        if ($request->isMethod('OPTIONS')) {
             return response()->json('{"method":"OPTIONS"}', 200, $headers);
         }
 
