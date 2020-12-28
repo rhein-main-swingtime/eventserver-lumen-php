@@ -141,7 +141,7 @@ class ImportCalendarEvents extends Command
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function importAll(): string
+    public function importAll(): array
     {
 
         $updated = [
@@ -248,12 +248,12 @@ class ImportCalendarEvents extends Command
             $deleted['events'] += $this->removeOutdatedEvents($updatedEventIDs);
         }
 
-        return json_encode([
+        return [
             'status'    => $status,
             'updated'   => $updated,
             'deleted'   => $deleted,
             'errors'    => count($errors) > 0 ? $errors : 'none',
-        ], JSON_PRETTY_PRINT);
+        ];
     }
 
     /**
@@ -265,8 +265,12 @@ class ImportCalendarEvents extends Command
     public function handle()
     {
         Log::info('Event Import Started');
+
         $result = $this->importAll();
-        if ($result['status'] === self::STATUS_ERROR) {
+        $status = $result['status'];
+        $result = json_encode($result, JSON_PRETTY_PRINT);
+
+        if ($status === self::STATUS_ERROR) {
             Log::error($result);
         } else {
             Log::info($result);
