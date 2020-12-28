@@ -6,3 +6,4 @@
 storage/credentials/
 storage/calendars/*
 launch.json
+public/.htaccess
