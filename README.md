@@ -16,9 +16,11 @@ Based on:
   - Navigate into `eventserver-lumen-php` folder
   - `composer install`
   - `php artisan migrate`
+  - `php artisan events:import` will import events from calendar sources
+
+# ... and then?
   - `php -S localhost:8088 public/index.php` will run a local dev server
   - `tail -f storage/logs/*` will monitor logfiles
-  - `php artisan events:import` will import events from calendar sources
   - Have fun!
 
 # Todos
