@@ -213,8 +213,8 @@ class EventsController extends Controller
 
         return response()->json([
             'filters'       => $filters,
-            'danceEvents'   => $danceEvents,
             'dates'         => $dates,
+            'danceEvents'   => $danceEvents,
         ]);
     }
 }
