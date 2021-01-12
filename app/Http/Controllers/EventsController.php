@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\Event;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use DateTime;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redis;
 
 class EventsController extends Controller
 {
 
-    private $queries = [];
-
     private const DEFAULT_LIMIT = 25;
+
+    private const FILTER_SINGULARS = [
+        'categories' => 'category',
+        'cities' => 'city',
+        'calendars' => 'calendar'
+    ];
 
     /**
      * Create a new controller instance.
@@ -139,15 +140,38 @@ class EventsController extends Controller
         );
     }
 
-    public function returnFilters(Request $request)
+    public function returnFilters(): array
     {
-        return response()->json(
-            [
-                'categories'    => $this->fetchCategories(),
-                'cities'        => $this->fetchCities(),
-                'calendars'     => $this->fetchCalendars(),
-            ]
-        );
+        return [
+            'categories'    => $this->fetchCategories(),
+            'cities'        => $this->fetchCities(),
+            'calendars'     => $this->fetchCalendars(),
+        ];
+    }
+
+    public function addFilterValues(Collection $danceEvents): array
+    {
+
+        $filters = $this->returnFilters();
+        $out = [];
+
+        foreach ($filters as $name => $values) {
+            $out[$name] = array_merge(
+                array_fill_keys(
+                    $values,
+                    null
+                ),
+                $danceEvents->countBy(
+                    function($event) use ($name) {
+                        /* @var $event App\Models\EventInstance */
+                        return $event->{self::FILTER_SINGULARS[$name]};
+                    }
+                )->toArray()
+            );
+        }
+
+        return $out;
+
     }
 
     public function addDateMapping(Collection $danceEvents): \Illuminate\Support\Collection
@@ -174,15 +198,12 @@ class EventsController extends Controller
 
         $danceEvents = $this->fetchEvents($request, $category);
         $dates = $this->addDateMapping($danceEvents);
+        $filters = $this->addFilterValues($danceEvents);
 
         return response()->json([
+            'filters'       => $filters,
             'danceEvents'   => $danceEvents,
             'dates'         => $dates,
-            // 'filters'       => [
-            //     'categories'    => $this->fetchCategories(),
-            //     'cities'        => $this->fetchCities(),
-            //     'calendars'     => $this->fetchCalendars(),
-            // ]
         ]);
     }
 }
