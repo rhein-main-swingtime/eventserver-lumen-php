@@ -140,14 +140,11 @@ class EventsController extends Controller
         );
     }
 
-<<<<<<< HEAD
     /**
      * Returns filters as array
      *
      * @return array
      */
-=======
->>>>>>> 7853cdec7d43933bda87cd8139f455e92a3964b8
     public function returnFilters(): array
     {
         return [
@@ -155,34 +152,6 @@ class EventsController extends Controller
             'cities'        => $this->fetchCities(),
             'calendars'     => $this->fetchCalendars(),
         ];
-<<<<<<< HEAD
-=======
-    }
-
-    public function addFilterValues(Collection $danceEvents): array
-    {
-
-        $filters = $this->returnFilters();
-        $out = [];
-
-        foreach ($filters as $name => $values) {
-            $out[$name] = array_merge(
-                array_fill_keys(
-                    $values,
-                    null
-                ),
-                $danceEvents->countBy(
-                    function($event) use ($name) {
-                        /* @var $event App\Models\EventInstance */
-                        return $event->{self::FILTER_SINGULARS[$name]};
-                    }
-                )->toArray()
-            );
-        }
-
-        return $out;
-
->>>>>>> 7853cdec7d43933bda87cd8139f455e92a3964b8
     }
 
     /**
