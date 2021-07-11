@@ -6,10 +6,13 @@ use App\Events\Event;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use DateTime;
+use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 class EventsController extends Controller
 {
@@ -132,11 +135,13 @@ class EventsController extends Controller
      */
     protected function fetchCities(): array
     {
-        return array_values(
+        $out = [];
+        $cities = array_values(
             EventInstance::distinct('city')
             ->pluck('city')
             ->toArray()
         );
+        return $cities;
     }
 
     public function returnFilters(Request $request)
@@ -158,6 +163,22 @@ class EventsController extends Controller
         });
 
         return $datesCollection;
+    }
+
+    public function eventsByMonth(Request $request, string $date): \Illuminate\Support\Collection
+    {
+
+        [$year, $month] = explode('_', $date);
+        $startDate = new \DateTimeImmutable($year . '-' . $month . '-01  00:00:00.000');
+        $endDate = $startDate->modify('last day of this month')->setTime(23, 59, 59, 999);
+
+        $query = (new EventInstance())
+        ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+        ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB))
+        ->whereDate('start_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB))
+        ->orderBy('start_date_time', 'ASC');
+
+        return $query->get();
     }
 
     /**
