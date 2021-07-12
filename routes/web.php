@@ -28,6 +28,11 @@ $router->get(
 );
 
 $router->get(
+    'events/byMonth/{date:\d{4}_\d{1,2}}',
+    ['uses' => 'EventsController@EventsByMonth']
+);
+
+$router->get(
     'filters',
     ['uses' => 'EventsController@ReturnFilters']
 );
