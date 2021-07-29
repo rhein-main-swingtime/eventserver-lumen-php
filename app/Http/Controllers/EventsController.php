@@ -104,13 +104,30 @@ class EventsController extends Controller
      *
      * @return string[]
      */
-    protected function fetchCategories(): array
+    protected function fetchCategories(array $selected): array
     {
-        return array_values(
+
+        $out = [];
+
+        $categories = array_values(
             CalendarEvent::distinct('category')
             ->pluck('category')
             ->toArray()
         );
+
+        foreach ($categories as $category) {
+            $count = (new EventInstance())
+            ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+            ->whereCategory($category)
+            ->count();
+
+            $out[$category] = [
+                'count' => $count,
+                'selected' => in_array($category, $selected)
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -118,13 +135,31 @@ class EventsController extends Controller
      *
      * @return string[]
      */
-    protected function fetchCalendars(): array
+    protected function fetchCalendars(array $selected): array
     {
-        return array_values(
+
+        $out = [];
+
+        $calendars = array_values(
             CalendarEvent::distinct('calendar')
             ->pluck('calendar')
             ->toArray()
         );
+
+        foreach ($calendars as $calendar) {
+            $count = (new EventInstance())
+            ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+            ->whereCalendar($calendar)
+            ->count();
+
+            $out[$calendar] = [
+                'count' => $count,
+                'selected' => in_array($calendar, $selected)
+            ];
+        }
+
+        return $out;
+
     }
 
     /**
@@ -132,7 +167,7 @@ class EventsController extends Controller
      *
      * @return string[]
      */
-    protected function fetchCities(): array
+    protected function fetchCities(array $selected): array
     {
         $out = [];
         $cities = array_values(
@@ -140,7 +175,16 @@ class EventsController extends Controller
             ->pluck('city')
             ->toArray()
         );
-        return $cities;
+
+        foreach($cities as $city) {
+            $count = EventInstance::query()->select()->whereCity($city)->count();
+            $out[$city] = [
+                'count' => $count,
+                'selected' => in_array($city, $selected)
+            ];
+        }
+
+        return $out;
     }
 
     /**
@@ -148,12 +192,17 @@ class EventsController extends Controller
      *
      * @return array
      */
-    public function returnFilters(): array
+    public function returnFilters(Request $request): array
     {
+
+        $selectedCategories = $request->input('categories');
+        $selectedCities = $request->input('cities');
+        $selectedCalendars = $request->input('calendars');
+
         return [
-            'categories'    => $this->fetchCategories(),
-            'cities'        => $this->fetchCities(),
-            'calendars'     => $this->fetchCalendars(),
+            'category'    => $this->fetchCategories($selectedCategories ?? []),
+            'city'        => $this->fetchCities($selectedCities ?? []),
+            'calendar'     => $this->fetchCalendars($selectedCalendars ?? []),
         ];
     }
 
@@ -197,27 +246,41 @@ class EventsController extends Controller
     public function addDateMapping(Collection $danceEvents): \Illuminate\Support\Collection
     {
         $datesCollection = $danceEvents->mapToGroups(function ($item, $key) {
-            $startDate = (new \DateTimeImmutable($item['start_date_time']))->format('Y-m-d');
+            $startDate = (new \DateTimeImmutable($item['start_date_time']))->format('Y-n-d');
             return [$startDate => (int) $item['id']];
         });
 
         return $datesCollection;
     }
 
-    public function eventsByMonth(Request $request, string $date): \Illuminate\Support\Collection
+    /**
+     * Returns events by month
+     *
+     * @param Request $request
+     * @param string $date
+     * @return \Illuminate\Support\Collection[]
+     */
+    public function eventsByMonth(Request $request, string $date): array
     {
 
-        [$year, $month] = explode('_', $date);
+        [$year, $month] = explode('-', $date);
         $startDate = new \DateTimeImmutable($year . '-' . $month . '-01  00:00:00.000');
         $endDate = $startDate->modify('last day of this month')->setTime(23, 59, 59, 999);
 
         $query = (new EventInstance())
         ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
         ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB))
+        ->whereDate('end_date_time', '>=', (new DateTimeImmutable())->format(EventInstance::DATE_TIME_FORMAT_DB))
         ->whereDate('start_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB))
         ->orderBy('start_date_time', 'ASC');
 
-        return $query->get();
+        $events = $query->get();
+        $dates = $this->addDateMapping($events);
+
+        return [
+            'events' => $events,
+            'dates' => $dates,
+        ];
     }
 
     /**
@@ -228,10 +291,10 @@ class EventsController extends Controller
         $this->validateRequest($request);
         $danceEvents = $this->fetchEvents($request, $category);
         $dates = $this->addDateMapping($danceEvents);
-        $filters = $this->addFilterValues($danceEvents);
+        // $filters = $this->addFilterValues($danceEvents);
 
         return response()->json([
-            'filters'       => $filters,
+            // 'filters'       => $filters,
             'danceEvents'   => $danceEvents,
             'dates'         => $dates,
         ]);

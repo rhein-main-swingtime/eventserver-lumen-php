@@ -28,7 +28,7 @@ $router->get(
 );
 
 $router->get(
-    'events/byMonth/{date:\d{4}_\d{1,2}}',
+    'events/byMonth/{date:\d{4}\-\d{1,2}}',
     ['uses' => 'EventsController@EventsByMonth']
 );
 
