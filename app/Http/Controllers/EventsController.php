@@ -294,9 +294,10 @@ class EventsController extends Controller
         // $filters = $this->addFilterValues($danceEvents);
 
         return response()->json([
-            // 'filters'       => $filters,
+            //'filters'       => $filters,
             'danceEvents'   => $danceEvents,
             'dates'         => $dates,
+            'danceEvents'   => $danceEvents,
         ]);
     }
 }
