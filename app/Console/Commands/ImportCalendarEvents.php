@@ -10,6 +10,8 @@ use Illuminate\Console\Command;
 use Google_Service_Calendar;
 use App\Models\EventInstance;
 use App\Models\CalendarEvent;
+use DateTimeImmutable;
+use Google_Service_Calendar_EventDateTime;
 use Log;
 
 /**
@@ -99,10 +101,12 @@ class ImportCalendarEvents extends Command
     {
 
         $cities = [
-            'Offenbach' => "offenbach",
-            'Gießen' => "(G|g)ie(ss|ß)en",
-            'Frankfurt' => "frankfurt",
             'Darmstadt' => "darmsta(dt|tt|dd)",
+            'Frankfurt' => "frankfurt",
+            'Gießen' => "(G|g)ie(ss|ß)en",
+            'Mainz' => "mainz",
+            'Offenbach' => "offenbach",
+            'Rüsselsheim' => "r(ü|ue)(ss|ß)elsheim",
         ];
 
         foreach ($cities as $city => $regex) {
@@ -136,6 +140,11 @@ class ImportCalendarEvents extends Command
         return $name;
     }
 
+    private function getOffset(\Google_Service_Calendar_EventDateTime $date): float  {
+        $val = substr($date->dateTime, -6);
+        return floatval($val);
+    }
+
     /**
      * Imports all sources
      *
@@ -160,7 +169,7 @@ class ImportCalendarEvents extends Command
             'maxResults' => 2500,
             'singleEvents' => false,
             'timeMin' => (new \DateTimeImmutable('now'))->format('Y-m-d\TH:i:sP'),
-            'timeMax'=> (new \DateTimeImmutable('+2 year'))->format('Y-m-d\TH:i:sP'),
+            'timeMax'=> (new \DateTimeImmutable('+4 year'))->format('Y-m-d\TH:i:sP'),
         ];
 
 
@@ -170,6 +179,7 @@ class ImportCalendarEvents extends Command
             foreach ($eventList as $event) {
                 $eventId = $event->getId();
                 $recurrence = $event->getRecurrence();
+
                 if (gettype($recurrence) === 'array') {
                     $recurrence = implode(' | ', $recurrence);
                 }
@@ -195,46 +205,44 @@ class ImportCalendarEvents extends Command
                     $updatedEventIDs[] = $eventId;
                     $updated['events']++;
                 } catch (\Exception $e) {
-                    $errors[] = [
-                        'message' => $e->getMessage(),
-                        'code' => $e->getCode()
-                    ];
-                    $status = self::STATUS_ERROR;
-                    continue;
+                    print_r($e->getMessage());
                 }
 
                 foreach ($instances->getItems() as $instance) {
                     try {
                         $instance_id = $instance->getId();
                         $updatedInstanceIDs[] = $instance_id;
-                        $instance->getRecurrence();
+
+                        $city = $this->retrieveCity(
+                            $instance->getLocation()
+                            . ' ' . $instance->getSummary()
+                            . ' ' . $instance->getDescription()
+                        );
+
+                        $summary = $this->retrieveSummary($city, $instance->getSummary());
+
                         EventInstance::updateOrCreate(
                             [
                                 'instance_id' => $instance_id,
                                 'event_id'    => $eventId,
                             ],
                             [
-                                'instance_id'       => $instance_id,
-                                'event_id'          => $eventId,
-                                'summary'           => $instance->getSummary(),
-                                'description'       => $instance->getDescription() ?? '',
-                                'location'          => $instance->getLocation(),
-                                'start_date_time'   => $instance->getStart(),
-                                'end_date_time'     => $instance->getEnd(),
-                                'city'              => $this->retrieveCity(
-                                    $instance->getLocation()
-                                    . ' ' . $instance->getSummary()
-                                    . ' ' . $instance->getDescription()
-                                ),
+                                'instance_id'               => $instance_id,
+                                'event_id'                  => $eventId,
+                                'summary'                   => $summary,
+                                'description'               => $this->formatDescription($instance->getDescription() ?? ''),
+                                'location'                  => $instance->getLocation(),
+                                'city'                      => $city,
+                                'start_date_time'           => $instance->getStart(),
+                                'end_date_time'             => $instance->getEnd(),
+                                'start_date_time_offset'    => $this->getOffset($instance->getStart()),
+                                'end_date_time_offset'      => $this->getOffset($instance->getStart()),
                             ]
                         );
                         $updated['instances']++;
                     } catch (\Exception $e) {
-                        $errors[] = [
-                            'message' => $e->getMessage(),
-                            'code' => $e->getCode()
-                        ];
-                        $status = 500;
+                        print_r($e->getMessage());
+                        die;
                     }
                 }
 
@@ -254,6 +262,50 @@ class ImportCalendarEvents extends Command
             'deleted'   => $deleted,
             'errors'    => count($errors) > 0 ? $errors : 'none',
         ];
+    }
+
+    private function formatDescription(string $desc): string
+    {
+        if ($desc !== strip_tags($desc)) { // already html
+            return $desc;
+        }
+
+        return nl2br($desc);
+    }
+
+    private function retrieveSummary(string $city, $summary) {
+        $map = [
+            'frankfurt' => [
+                'f'
+            ],
+            'darmstadt' => [
+                'da'
+            ],
+            'mainz' => [
+                'mz', 'm'
+            ]
+        ];
+
+        $prefixesForCity = $map[strtolower($city)] ?? null;
+        if ($city === 'Andere' || $prefixesForCity === null) {
+            return $summary;
+        }
+
+        foreach($prefixesForCity as $prefix) {
+            if (str_starts_with(strtolower($summary), $prefix . ' ')) {
+
+                $length = mb_strlen($summary);
+                $prefixLength = mb_strlen($prefix) + 1;
+
+                return mb_substr(
+                    $summary,
+                    ($length - $prefixLength) * -1
+                );
+            }
+        }
+
+
+        return $summary;
     }
 
     /**

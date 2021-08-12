@@ -41,6 +41,16 @@ class EventsController extends Controller
         ]);
     }
 
+    protected function validateEventRequest(Request $request): void {
+        $this->validate(
+            $request,
+            [
+                'from'  => 'date|required',
+                'to'    => 'date|required|after:from',
+            ]
+        );
+    }
+
     /**
      * fetchEvents
      *
@@ -194,48 +204,71 @@ class EventsController extends Controller
      */
     public function returnFilters(Request $request): array
     {
+        $instance = (new EventInstance())
+            ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id');
 
-        $selectedCategories = $request->input('categories');
-        $selectedCities = $request->input('cities');
-        $selectedCalendars = $request->input('calendars');
+        foreach (self::FILTER_SINGULARS as $plural => $singular) {
+            $get = $request->input($plural);
+            if ($get === null || count($get) === 0) {
+                continue;
+            }
 
-        return [
-            'category'    => $this->fetchCategories($selectedCategories ?? []),
-            'city'        => $this->fetchCities($selectedCities ?? []),
-            'calendar'     => $this->fetchCalendars($selectedCalendars ?? []),
-        ];
-    }
-
-    /**
-     * Inserts filter values to dance events collection
-     *
-     * @param Collection $danceEvents   Dance events
-     * @return array
-     */
-    public function addFilterValues(Collection $danceEvents): array
-    {
-
-        $filters = $this->returnFilters();
-        $out = [];
-
-        foreach ($filters as $name => $values) {
-            $out[$name] = array_merge(
-                array_fill_keys(
-                    $values,
-                    null
-                ),
-                $danceEvents->countBy(
-                    function($event) use ($name) {
-                        /* @var $event App\Models\EventInstance */
-                        return $event->{self::FILTER_SINGULARS[$name]};
-                    }
-                )->toArray()
-            );
+            $instance->whereIn($singular, $get);
         }
 
-        return $out;
+        $total = [];
 
+        foreach (array_values(self::FILTER_SINGULARS) as $item) {
+
+            if ($item === 'city') {
+                $out[$item] = EventInstance::distinct($item)
+                ->pluck($item)
+                ->toArray();
+                continue;
+            }
+
+            $out[$item] = CalendarEvent::distinct($item)
+                ->pluck($item)
+                ->toArray();
+        }
+
+        // return [
+        //     'category'    => $this->fetchCategories($selectedCategories ?? []),
+        //     'city'        => $this->fetchCities($selectedCities ?? []),
+        //     'calendar'     => $this->fetchCalendars($selectedCalendars ?? []),
+        // ];
     }
+
+    // /**
+    //  * Inserts filter values to dance events collection
+    //  *
+    //  * @param Collection $danceEvents   Dance events
+    //  * @return array
+    //  */
+    // public function addFilterValues(Collection $danceEvents): array
+    // {
+
+    //     $filters = $this->returnFilters();
+    //     $out = [];
+
+    //     foreach ($filters as $name => $values) {
+    //         $out[$name] = array_merge(
+    //             array_fill_keys(
+    //                 $values,
+    //                 null
+    //             ),
+    //             $danceEvents->countBy(
+    //                 function($event) use ($name) {
+    //                     /* @var $event App\Models\EventInstance */
+    //                     return $event->{self::FILTER_SINGULARS[$name]};
+    //                 }
+    //             )->toArray()
+    //         );
+    //     }
+
+    //     return $out;
+
+    // }
 
     /**
      * Adds mapping between dates and events
@@ -281,6 +314,22 @@ class EventsController extends Controller
             'events' => $events,
             'dates' => $dates,
         ];
+    }
+
+    public function findEvents(Request $request): \Illuminate\Support\Collection {
+
+        $this->validateEventRequest($request);
+
+        $fromDate = new DateTimeImmutable($request->input('from'));
+        $endDate = new DateTimeImmutable($request->input('to'));
+
+        return (new EventInstance())
+            ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+            ->whereDate('start_date_time', '>=', $fromDate->format(EventInstance::DATE_TIME_FORMAT_DB))
+            // ->whereDate('end_date_time', '>=', (new DateTimeImmutable())->format(EventInstance::DATE_TIME_FORMAT_DB))
+            ->whereDate('start_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB))
+            ->orderBy('start_date_time', 'ASC')->get();
+
     }
 
     /**

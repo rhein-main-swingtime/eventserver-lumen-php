@@ -2,6 +2,8 @@
 
 /** @var \Laravel\Lumen\Routing\Router $router */
 
+use App\Http\Controllers\FilterController;
+
 /*
 |--------------------------------------------------------------------------
 | Application Routes
@@ -17,22 +19,27 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
-$router->get(
-    'search/{search}[/{limit:[0-9]+}]',
-    ['uses' => 'SearchController@runTextSearch']
-);
+// $router->get(
+//     'search/{search}[/{limit:[0-9]+}]',
+//     ['uses' => 'SearchController@runTextSearch']
+// );
 
 $router->get(
     'events',
-    ['uses' => 'EventsController@ShowEvents']
+    ['uses' => 'EventsController@findEvents']
+);
+
+// $router->get(
+//     'events/byMonth/{date:\d{4}\-\d{1,2}}',
+//     ['uses' => 'EventsController@EventsByMonth']
+// );
+
+$router->get(
+    'filters/available',
+    ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@fetchFilters']
 );
 
 $router->get(
-    'events/byMonth/{date:\d{4}\-\d{1,2}}',
-    ['uses' => 'EventsController@EventsByMonth']
-);
-
-$router->get(
-    'filters',
-    ['uses' => 'EventsController@ReturnFilters']
+    'filters/count/{category}/{name}',
+    ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@getCount']
 );
