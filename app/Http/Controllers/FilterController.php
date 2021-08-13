@@ -13,12 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class FilterController extends Controller
 {
-    private const FILTER_SINGULARS = [
-        'categories' => 'category',
-        'cities' => 'city',
-        'calendars' => 'calendar'
-    ];
-
     /**
      * Create a new controller instance.
      *
@@ -109,23 +103,6 @@ class FilterController extends Controller
         return $out;
     }
 
-    protected function getCollection(string $category, string $name, ): Collection
-    {
-        $instance = (new EventInstance())::query()
-        ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
-        ->select()->where($category, $name);
-
-        return $instance->get();
-
-    }
-
-    private function isSelected(Request $request, string $cat, string $name): bool {
-        $query = $request->input($cat);
-        return $query !== null
-            && is_array($query)
-            && in_array($name, $query);
-    }
-
     /**
      * Returns filters as array
      *
@@ -146,6 +123,7 @@ class FilterController extends Controller
 
         $instance = (new EventInstance())::query()
         ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+        ->whereDate('end_date_time', '>=', Carbon::now()->toDateTimeString())
         ->select([$category])->where($category, $name);
 
         foreach (self::PARAMETERS as $param) {
