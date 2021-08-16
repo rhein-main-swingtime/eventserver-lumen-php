@@ -3,6 +3,7 @@
 /** @var \Laravel\Lumen\Routing\Router $router */
 
 use App\Http\Controllers\FilterController;
+use App\Versions\Api;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,27 +20,17 @@ $router->get('/', function () use ($router) {
     return $router->app->version();
 });
 
-// $router->get(
-//     'search/{search}[/{limit:[0-9]+}]',
-//     ['uses' => 'SearchController@runTextSearch']
-// );
-
 $router->get(
-    'events',
+    'events' . api::VersionParam(true),
     ['uses' => 'EventsController@findEvents']
 );
 
-// $router->get(
-//     'events/byMonth/{date:\d{4}\-\d{1,2}}',
-//     ['uses' => 'EventsController@EventsByMonth']
-// );
-
 $router->get(
-    'filters/available',
+    'filters/available' . api::VersionParam(true),
     ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@fetchFilters']
 );
 
 $router->get(
-    'filters/count/{category}/{name}',
+    'filters/count' . api::VersionParam() . '/{category}/{name}',
     ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@getCount']
 );

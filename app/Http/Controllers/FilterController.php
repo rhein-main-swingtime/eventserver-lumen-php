@@ -114,7 +114,7 @@ class FilterController extends Controller
         return $out;
     }
 
-    public function getCount(string $category, string $name, Request $request): int {
+    public function getCount(string $version, string $category, string $name, Request $request): int {
 
         $this->validateRequest($request);
 
