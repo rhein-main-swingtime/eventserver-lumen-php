@@ -133,6 +133,9 @@ class FilterController extends Controller
             }
 
             foreach($inputs as $input) {
+                if ($param === $category) {
+                    continue;
+                }
                 $instance->where($param, $input);
             }
         }
