@@ -8,7 +8,9 @@ use Carbon\Carbon;
 use DateTime;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\DB;
 
 class FilterController extends Controller
@@ -108,13 +110,13 @@ class FilterController extends Controller
      *
      * @return array
      */
-    public function fetchFilters(Request $request): array
+    public function fetchFilters(): JsonResponse
     {
-        $out = $this->getAvailableFilters($request);
-        return $out;
+        $out = $this->getAvailableFilters();
+        return response()->json($out);
     }
 
-    public function getCount(string $version, string $category, string $name, Request $request): int {
+    public function getCount(string $version, string $category, string $name, Request $request):  JsonResponse {
 
         $this->validateRequest($request);
 
@@ -140,6 +142,6 @@ class FilterController extends Controller
             }
         }
 
-        return $instance->get()->count();
+        return response()->json($instance->get()->count());
     }
 }
