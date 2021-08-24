@@ -26,11 +26,16 @@ $router->get(
 );
 
 $router->get(
-    'filters/available' . api::VersionParam(true),
+    'filters' . api::VersionParam() . '/available',
     ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@fetchFilters']
 );
 
 $router->get(
-    'filters/count' . api::VersionParam() . '/{category}/{name}',
+    'filters' . api::VersionParam() . '/count/{category}/{name}',
     ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@getCount']
+);
+
+$router->get(
+    'filters'. api::VersionParam() . '/total-count[/]',
+    ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@getTotalCount']
 );

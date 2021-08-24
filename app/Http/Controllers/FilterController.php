@@ -5,25 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use Carbon\Carbon;
-use DateTime;
-use DateTimeImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\DB;
 
 class FilterController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        //
-    }
 
     public const PARAMETER_CITY         = 'city';
     public const PARAMETER_CATEGORY     = 'category';
@@ -41,9 +29,17 @@ class FilterController extends Controller
         self::PARAMETER_CITY => 'array',
     ];
 
-    protected function validateRequest(Request $request): void
+    protected Request $request;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct(Request $request)
     {
         $this->validate($request, self::PARAMETER_VALIDATIONS);
+        $this->request = $request;
     }
 
     /**
@@ -88,60 +84,77 @@ class FilterController extends Controller
         }
     }
 
-    protected function getAvailableFilters(): array {
-        $out = [];
+    protected function getAvailableFilters(Request $request): array {
+        $filters = [];
 
         foreach (self::PARAMETERS as $cat) {
+
             if ($cat === self::PARAMETER_CITY) {
                 $distinct = EventInstance::distinct($cat);
             } else {
                 $distinct = CalendarEvent::distinct($cat);
             }
 
-            $out[$cat] = $distinct->pluck($cat)
-                ->toArray();
+            $filters[$cat] = [];
+            $items = $distinct->pluck($cat)->toArray();
+            $queryItems = $request->input($cat) ?? [];
+
+            foreach ($items as $item) {
+                $builder = $this->generateBaseCollection();
+                if (in_array($item, $queryItems)) {
+                    $count = $builder->getQuery()->exists();
+                } else if (empty($queryItems) !==  true) {
+                    $count = $builder->orWhere($cat, $item)->getQuery()->exists();
+                } else {
+                    $count = $builder->where($cat, $item)->getQuery()->exists();
+                }
+
+                $filters[$cat][] = [
+                    'name' => $item,
+                    'available' => $count
+                ];
+
+            }
         }
 
-        return $out;
+        return [
+            'filters' => $filters,
+            'totalCount' => $this->generateBaseCollection()->get()->count(),
+        ];
+    }
+
+    protected function generateBaseCollection(): \Illuminate\Database\Eloquent\Builder {
+
+        $instance = (new EventInstance())::query()
+        ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+        ->whereDate('end_date_time', '>=', Carbon::now()->toDateTimeString());
+
+        foreach (self::PARAMETERS as $param) {
+            $inputs = $this->request->input($param);
+            if ($inputs === null || !is_array($inputs)) {
+                continue;
+            }
+
+            $instance->whereIn($param, $inputs);
+        }
+
+        return $instance;
+
     }
 
     /**
      * Returns filters as array
      *
-     * @return array
+     * @return JsonResponse
      */
     public function fetchFilters(): JsonResponse
     {
-        $out = $this->getAvailableFilters();
+        $out = $this->getAvailableFilters($this->request);
         return response()->json($out);
     }
 
-    public function getCount(string $version, string $category, string $name, Request $request):  JsonResponse {
-
-        $this->validateRequest($request);
-
-        $category = urldecode($category);
-        $name = urldecode($name);
-
-        $instance = (new EventInstance())::query()
-        ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
-        ->whereDate('end_date_time', '>=', Carbon::now()->toDateTimeString())
-        ->select([$category])->where($category, $name);
-
-        foreach (self::PARAMETERS as $param) {
-            $inputs = $request->input($param);
-            if ($inputs === null || !is_array($inputs)) {
-                continue;
-            }
-
-            foreach($inputs as $input) {
-                if ($param === $category) {
-                    continue;
-                }
-                $instance->where($param, $input);
-            }
-        }
-
-        return response()->json($instance->get()->count());
+    public function getTotalCount(string $version, Request $request): JsonResponse {
+        return response()->json($out);
     }
+
 }

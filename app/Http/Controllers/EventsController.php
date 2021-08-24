@@ -323,6 +323,8 @@ class EventsController extends Controller
         $fromDate = new DateTimeImmutable($request->input('from'));
         $endDate = new DateTimeImmutable($request->input('to'));
 
+        sleep(2);
+
         return (new EventInstance())
             ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
             ->whereDate('start_date_time', '>=', $fromDate->format(EventInstance::DATE_TIME_FORMAT_DB))
