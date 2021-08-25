@@ -21,7 +21,7 @@ $router->get('/', function () use ($router) {
 });
 
 $router->get(
-    'events' . api::VersionParam(true) . '[/]',
+    'events' . api::VersionParam() . '[/]',
     ['uses' => 'EventsController@findEvents']
 );
 
