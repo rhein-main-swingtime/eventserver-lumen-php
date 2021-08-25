@@ -6,6 +6,14 @@ use Illuminate\Support\Facades\Log;
 
 class CorsMiddleware
 {
+
+    private function isLocalhost(): bool {
+        return (
+            strpos($_SERVER['REMOTE_ADDR'], 'localhost')  !== false
+            || strpos($_SERVER['REMOTE_ADDR'], '127.0.0.1')  !== false
+        );
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -16,8 +24,12 @@ class CorsMiddleware
     public function handle($request, Closure $next)
     {
 
-        $protocol = !empty($_SERVER['HTTPS']) ? 'https://' : 'http://';
-        $allowed_origin = $protocol . 'soontobe.rmswing.de';
+        if ($this->isLocalhost()) {
+            $allowed_origin = '*';
+        } else {
+            $protocol = !empty($_SERVER['HTTPS']) ? 'https://' : 'http://';
+            $allowed_origin = $protocol . 'soontobe.rmswing.de';
+        }
 
         $headers = [
             'Access-Control-Allow-Origin'      => $allowed_origin,
