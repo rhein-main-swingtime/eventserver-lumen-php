@@ -21,17 +21,17 @@ $router->get('/', function () use ($router) {
 });
 
 $router->get(
-    'events' . api::VersionParam(true),
+    'events' . api::VersionParam(true) . '[/]',
     ['uses' => 'EventsController@findEvents']
 );
 
 $router->get(
-    'filters' . api::VersionParam() . '/available',
+    'filters' . api::VersionParam() . '/available[/]',
     ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@fetchFilters']
 );
 
 $router->get(
-    'filters' . api::VersionParam() . '/count/{category}/{name}',
+    'filters' . api::VersionParam() . '/count/{category}/{name}[/]',
     ['uses' => (new \ReflectionClass(FilterController::class))->getShortName() . '@getCount']
 );
 

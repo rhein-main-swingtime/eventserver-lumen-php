@@ -2,6 +2,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Support\Facades\Log;
 
 class CorsMiddleware
 {
@@ -17,13 +18,6 @@ class CorsMiddleware
 
         $protocol = !empty($_SERVER['HTTPS']) ? 'https://' : 'http://';
         $allowed_origin = $protocol . 'soontobe.rmswing.de';
-
-        if (in_array(
-            $_SERVER['REMOTE_ADDR'],
-            ['127.0.0.1', 'localhost']
-        )) {
-            $allowed_origin = '*';
-        }
 
         $headers = [
             'Access-Control-Allow-Origin'      => $allowed_origin,
