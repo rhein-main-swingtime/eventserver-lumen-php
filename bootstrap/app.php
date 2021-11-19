@@ -81,6 +81,7 @@ $app->configure('app');
 // ]);
 
 $app->middleware([
+    App\Http\Middleware\LoggingMiddleware::class,
     App\Http\Middleware\CorsMiddleware::class
 ]);
 
