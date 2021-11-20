@@ -24,7 +24,6 @@ $app = new Laravel\Lumen\Application(
 );
 
 $app->withFacades();
-
 $app->withEloquent();
 
 /*
@@ -98,6 +97,10 @@ $app->middleware([
 
 $app->register(App\Providers\AppServiceProvider::class);
 $app->register(App\Providers\GoogleCalendarServiceProvider::class);
+$app->register(App\Providers\GuzzleServiceProvider::class);
+$app->register(App\Providers\DanceEventSanitizerServiceProvider::class);
+
+// $app->register(App\Providers\CacheServiceProvider::class);
 
 /*
 |--------------------------------------------------------------------------

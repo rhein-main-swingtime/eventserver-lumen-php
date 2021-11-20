@@ -7,10 +7,13 @@ use Illuminate\Support\Facades\Log;
 class CorsMiddleware
 {
 
-    private function isLocalhost(): bool {
+    private function isLocalhost(): bool
+    {
         return (
             strpos($_SERVER['REMOTE_ADDR'], 'localhost')  !== false
             || strpos($_SERVER['REMOTE_ADDR'], '127.0.0.1')  !== false
+            || strpos($_SERVER['REMOTE_ADDR'], '::1')  !== false
+            || strpos($_SERVER['REMOTE_ADDR'], '0:0:0:0:0:0:0:1')  !== false
         );
     }
 

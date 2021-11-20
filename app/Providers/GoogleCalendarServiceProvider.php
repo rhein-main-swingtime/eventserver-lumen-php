@@ -4,17 +4,18 @@ namespace App\Providers;
 
 use Google_Client;
 use Illuminate\Support\ServiceProvider;
+use Google\Service\Calendar;
+use League\Flysystem\Adapter\Local;
+use League\Flysystem\Filesystem;
+use Cache\Adapter\Filesystem\FilesystemCachePool;
+use GuzzleHttp\Client;
+use Stash\Pool;
+use League\Flysystem\Adapter\Local as Adapter;
+use League\Flysystem\Cached\CachedAdapter;
+use League\Flysystem\Cached\Storage\Stash as StashStore;
 
 class GoogleCalendarServiceProvider extends ServiceProvider
 {
-
-    private const SETTINGS = [
-        // Default highest number, since we'll consolidate later,
-        // let's grab everything we can get our hands on!
-        'maxResults' => 2500,
-        // Do not change this shit, seriously.
-        'singleEvents' => true,
-    ];
 
     /**
      * Returns path to credentials file
@@ -35,11 +36,23 @@ class GoogleCalendarServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton(\Google_Service_Calendar::class, function ($app) {
+        $this->app->singleton(Calendar::class, function ($app) {
+
+            // You can optionally pass a driver (recommended, default: in-memory driver)
+            $pool = new Pool();
+            // Storage key and expire time are optional
+            $cache = new StashStore($pool, 'storageKey', 300);
+            $adapter = new CachedAdapter(new Adapter(storage_path()), $cache);
+            $filesystem = new Filesystem($adapter);
+            $cache = new FilesystemCachePool($filesystem);
+
+            $guzzleClient = app(Client::class);
             $client = new Google_Client();
             $client->setAuthConfig($this->getCredentialsPath());
-            $client->setScopes([\Google_Service_Calendar::CALENDAR_READONLY]);
-            return new \Google_Service_Calendar($client);
+            $client->setScopes([Calendar::CALENDAR_READONLY]);
+            // $client->setCache($cache);
+            $client->setHttpClient($guzzleClient);
+            return new Calendar($client);
         });
     }
 }
