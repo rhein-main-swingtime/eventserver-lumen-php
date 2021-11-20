@@ -6,8 +6,15 @@
     "type": "project",
     "require": {
         "php": "^7.4|^8.0",
-        "google/apiclient": "^2.0",
-        "laravel/lumen-framework": "^8.0"
+        "cache/filesystem-adapter": "^1.1",
+        "google/apiclient": "^2.11",
+        "guzzlehttp/guzzle": "^7.0",
+        "kevinrob/guzzle-cache-middleware": "^3.4",
+        "laravel/lumen-framework": "^8.0",
+        "league/flysystem-cached-adapter": "^1.1",
+        "symfony/cache": "^5.3",
+        "tedivm/stash": "^0.16.0",
+        "tgalopin/html-sanitizer": "^1.4"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.8",
