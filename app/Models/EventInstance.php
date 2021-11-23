@@ -93,6 +93,7 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
         'start_date_time',
         'summary',
         'updated',
+        'foreign_url'
     ];
 
     protected $dates = [
@@ -109,17 +110,15 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
      */
     protected $hidden = [];
 
-    private function unfuckDate(Google_Service_Calendar_EventDateTime $value): string
+    private function unfuckDate(\Google\Service\Calendar\EventDateTime $value): string
     {
-
         $val = $value->getDateTime() ?? $value->getDate();
         $tz = $value->getTimeZone();
 
         return (Carbon::parse($val, $tz))->format(self::DATE_TIME_FORMAT_DB);
-
     }
 
-    public function setStartDateTimeAttribute(Google_Service_Calendar_EventDateTime $value): void
+    public function setStartDateTimeAttribute(\Google\Service\Calendar\EventDateTime $value): void
     {
         $this->attributes['start_date_time'] = $this->unfuckDate($value);
     }
@@ -129,7 +128,7 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
         return (new \DateTime($start_date_time))->format(self::DATE_TIME_FORMAT_JS);
     }
 
-    public function setEndDateTimeAttribute(Google_Service_Calendar_EventDateTime $value): void
+    public function setEndDateTimeAttribute(\Google\Service\Calendar\EventDateTime $value): void
     {
         $this->attributes['end_date_time'] = $this->unfuckDate($value);
     }
@@ -148,5 +147,4 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
     {
         $this->attributes['created'] = (Carbon::parse($created))->format(self::DATE_TIME_FORMAT_DB);
     }
-
 }
