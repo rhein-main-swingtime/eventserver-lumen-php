@@ -2,6 +2,7 @@
 
 /** @var \Laravel\Lumen\Routing\Router $router */
 
+use App\Http\Controllers\EventsController;
 use App\Http\Controllers\FilterController;
 use App\Versions\Api;
 
@@ -22,7 +23,7 @@ $router->get('/', function () use ($router) {
 
 $router->get(
     'events' . api::VersionParam() . '[/]',
-    ['uses' => 'EventsController@findEvents']
+    ['uses' => (new \ReflectionClass(EventsController::class))->getShortName() . '@listEvents']
 );
 
 $router->get(
