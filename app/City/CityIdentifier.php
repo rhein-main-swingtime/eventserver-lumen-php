@@ -111,7 +111,7 @@ class CityIdentifier
         }
     }
 
-    public function identifyCity(string &$summary, string $location): string
+    public function identifyCity(string &$summary, string $longtext): string
     {
 
         $parts = explode(' ', $summary, 2);
@@ -128,7 +128,7 @@ class CityIdentifier
 
         foreach ($this->identifications as $cityName => $idenfifier) {
             /** @var Identification $idenfifier */
-            if ($idenfifier->doesLocationMatch($location)) {
+            if ($idenfifier->doesLocationMatch($longtext)) {
                 return $cityName;
             }
         }

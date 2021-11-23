@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\HtmlSanitizer\DanceEventSanitizer;
-use App\HtmlSanitizer\DanceEventSanitizerInterface;
+use HtmlSanitizer\Sanitizer;
+use HtmlSanitizer\SanitizerInterface;
 use Illuminate\Support\ServiceProvider;
 
 class DanceEventSanitizerServiceProvider extends ServiceProvider
@@ -17,8 +17,8 @@ class DanceEventSanitizerServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->singleton(DanceEventSanitizerInterface::class, function ($app) {
-            return DanceEventSanitizer::create(
+        $this->app->singleton(SanitizerInterface::class, function ($app) {
+            return Sanitizer::create(
                 [
                     'extensions' => ['basic', 'list', 'table'],
                 ]

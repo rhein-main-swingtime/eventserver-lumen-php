@@ -6,13 +6,13 @@
 
 namespace App\Console\Commands;
 
+use App\City\CityIdentifier;
 use Illuminate\Console\Command;
-use Google_Service_Calendar;
 use App\Models\EventInstance;
 use App\Models\CalendarEvent;
-use DateTimeImmutable;
-use Google_Service_Calendar_EventDateTime;
 use Log;
+use Google\Service\Calendar;
+use HtmlSanitizer\SanitizerInterface;
 
 /**
  * Class RouteList
@@ -37,22 +37,24 @@ class ImportCalendarEvents extends Command
      */
     protected $description = 'Imports events from Calendar Sources.';
 
-    /**
-     * Calendar Service
-     *
-     * @var Google_Service_Calendar $googleCalendar
-     */
-    protected $googleCalendar;
+    protected Calendar $googleCalendar;
+    protected CityIdentifier $cityIdentifier;
+    protected SanitizerInterface $danceEventSanitizer;
 
     /**
      * Create a new command instance.
      *
      * @return void
      */
-    public function __construct(Google_Service_Calendar $googleCalendar)
-    {
+    public function __construct(
+        Calendar $googleCalendar,
+        CityIdentifier $cityIdentifier,
+        SanitizerInterface $danceEventSanitizer
+    ) {
         parent::__construct();
         $this->googleCalendar = $googleCalendar;
+        $this->cityIdentifier = $cityIdentifier;
+        $this->danceEventSanitizer = $danceEventSanitizer;
     }
 
     /**
@@ -140,9 +142,19 @@ class ImportCalendarEvents extends Command
         return $name;
     }
 
-    private function getOffset(\Google_Service_Calendar_EventDateTime $date): float  {
+    private function getOffset(\Google\Service\Calendar\EventDateTime $date): float
+    {
         $val = substr($date->dateTime, -6);
         return floatval($val);
+    }
+
+    private function getSanitizedDesc(string $desc): string
+    {
+        if ($desc === strip_tags($desc)) { // We're dealing with plaintext
+            return nl2br($desc);
+        }
+
+        return $this->danceEventSanitizer->sanitize($desc);
     }
 
     /**
@@ -165,89 +177,103 @@ class ImportCalendarEvents extends Command
         $errors = [];
         $updatedEventIDs = [];
 
-        $paramters = [
+        $parameters = [
             'maxResults' => 2500,
             'singleEvents' => false,
-            'timeMin' => (new \DateTimeImmutable('now'))->format('Y-m-d\TH:i:sP'),
-            'timeMax'=> (new \DateTimeImmutable('+4 year'))->format('Y-m-d\TH:i:sP'),
         ];
 
+        $i = 0;
+        $max = 4;
 
-        foreach ($this->getSources() as $name => $data) {
-            $eventList = $this->googleCalendar->events->listEvents($data['id'], $paramters);
+        while ($i !== $max) {
+            $parameters['timeMin'] = (new \DateTimeImmutable(
+                ($i === 0 ? 'now' : '+'.$i.' years')
+            ))->format('Y-m-d\TH:i:sP');
 
-            foreach ($eventList as $event) {
-                $eventId = $event->getId();
-                $recurrence = $event->getRecurrence();
+            $parameters['timeMax'] =  (new \DateTimeImmutable('+'.($i+1).' year'))->format('Y-m-d\TH:i:sP');
+            $i++;
 
-                if (gettype($recurrence) === 'array') {
-                    $recurrence = implode(' | ', $recurrence);
-                }
+            foreach ($this->getSources() as $name => $data) {
+                $eventList = $this->googleCalendar->events->listEvents($data['id'], $parameters);
 
-                $updatedInstanceIDs = [];
-                $instances = $this->googleCalendar->events->instances($data['id'], $event->getId());
+                foreach ($eventList as $event) {
+                    $eventId = $event->getId();
+                    $recurrence = $event->getRecurrence();
 
-                try {
-                    CalendarEvent::updateOrCreate(
-                        [
-                            'event_id' => $eventId,
-                        ],
-                        [
-                            'event_id'      => $eventId,
-                            'creator'       => $this->getCreator($event),
-                            'calendar'      => $name,
-                            'category'      => $data['category'],
-                            'updated'       => $event->getUpdated(),
-                            'created'       => $event->getCreated(),
-                            'recurrence'    => $recurrence
-                        ]
-                    );
-                    $updatedEventIDs[] = $eventId;
-                    $updated['events']++;
-                } catch (\Exception $e) {
-                    print_r($e->getMessage());
-                }
+                    if (gettype($recurrence) === 'array') {
+                        $recurrence = implode(' | ', $recurrence);
+                    }
 
-                foreach ($instances->getItems() as $instance) {
+                    $updatedInstanceIDs = [];
+                    $instances = $this->googleCalendar->events->instances($data['id'], $event->getId());
+
                     try {
-                        $instance_id = $instance->getId();
-                        $updatedInstanceIDs[] = $instance_id;
-
-                        $city = $this->retrieveCity(
-                            $instance->getLocation()
-                            . ' ' . $instance->getSummary()
-                            . ' ' . $instance->getDescription()
-                        );
-
-                        $summary = $this->retrieveSummary($city, $instance->getSummary());
-
-                        EventInstance::updateOrCreate(
+                        CalendarEvent::updateOrCreate(
                             [
-                                'instance_id' => $instance_id,
-                                'event_id'    => $eventId,
+                                'event_id' => $eventId,
                             ],
                             [
-                                'instance_id'               => $instance_id,
-                                'event_id'                  => $eventId,
-                                'summary'                   => $summary,
-                                'description'               => $this->formatDescription($instance->getDescription() ?? ''),
-                                'location'                  => $instance->getLocation(),
-                                'city'                      => $city,
-                                'start_date_time'           => $instance->getStart(),
-                                'end_date_time'             => $instance->getEnd(),
-                                'start_date_time_offset'    => $this->getOffset($instance->getStart()),
-                                'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                                'event_id'      => $eventId,
+                                'creator'       => $this->getCreator($event),
+                                'calendar'      => $name,
+                                'category'      => $data['category'],
+                                'updated'       => $event->getUpdated(),
+                                'created'       => $event->getCreated(),
+                                'recurrence'    => $recurrence
                             ]
                         );
-                        $updated['instances']++;
+                        $updatedEventIDs[] = $eventId;
+                        $updated['events']++;
                     } catch (\Exception $e) {
                         print_r($e->getMessage());
-                        die;
                     }
-                }
 
-                if (count($updatedInstanceIDs)) {
-                    $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
+                    foreach ($instances->getItems() as $instance) {
+                        try {
+                            $instance_id = $instance->getId();
+                            $updatedInstanceIDs[] = $instance_id;
+
+                            $summary = $instance->getSummary();
+                            $city = $this->cityIdentifier->identifyCity(
+                                $summary,
+                                implode('\n', [
+                                    $instance->summary,
+                                    $instance->location,
+                                    $instance->description ?? ''
+                                ])
+                            );
+
+                            EventInstance::updateOrCreate(
+                                [
+                                    'instance_id' => $instance_id,
+                                    'event_id'    => $eventId,
+                                ],
+                                [
+                                    'instance_id'               => $instance_id,
+                                    'event_id'                  => $eventId,
+                                    'summary'                   => $summary,
+                                    'description'               => $this->getSanitizedDesc(
+                                        $instance->getDescription() ?? ''
+                                    ),
+                                    'location'                  => $instance->getLocation(),
+                                    'city'                      => $city,
+                                    'foreign_url'               => $instance->htmlLink,
+                                    'start_date_time'           => $instance->getStart(),
+                                    'end_date_time'             => $instance->getEnd(),
+                                    'start_date_time_offset'    => $this->getOffset($instance->getStart()),
+                                    'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                                ]
+                            );
+                            $updated['instances']++;
+                        } catch (\Exception $e) {
+                            print_r($e->getMessage());
+                            die;
+                        }
+                    }
+
+                    if (count($updatedInstanceIDs)) {
+                        $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
+                    }
                 }
             }
         }
@@ -273,48 +299,13 @@ class ImportCalendarEvents extends Command
         return nl2br($desc);
     }
 
-    private function retrieveSummary(string $city, $summary) {
-        $map = [
-            'frankfurt' => [
-                'f'
-            ],
-            'darmstadt' => [
-                'da'
-            ],
-            'mainz' => [
-                'mz', 'm'
-            ]
-        ];
-
-        $prefixesForCity = $map[strtolower($city)] ?? null;
-        if ($city === 'Andere' || $prefixesForCity === null) {
-            return $summary;
-        }
-
-        foreach($prefixesForCity as $prefix) {
-            if (str_starts_with(strtolower($summary), $prefix . ' ')) {
-
-                $length = mb_strlen($summary);
-                $prefixLength = mb_strlen($prefix) + 1;
-
-                return mb_substr(
-                    $summary,
-                    ($length - $prefixLength) * -1
-                );
-            }
-        }
-
-
-        return $summary;
-    }
 
     /**
      * Execute the console command.
      *
-     * @param  \App\Support\DripEmailer  $drip
-     * @return mixed
+     * @return void
      */
-    public function handle()
+    public function handle(): void
     {
         Log::info('Event Import Started');
 
@@ -328,5 +319,4 @@ class ImportCalendarEvents extends Command
             Log::info($result);
         }
     }
-
 }
