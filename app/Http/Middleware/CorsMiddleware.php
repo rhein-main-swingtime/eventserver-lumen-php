@@ -9,12 +9,20 @@ class CorsMiddleware
 
     private function isLocalhost(): bool
     {
-        return (
-            strpos($_SERVER['REMOTE_ADDR'], 'localhost')  !== false
-            || strpos($_SERVER['REMOTE_ADDR'], '127.0.0.1')  !== false
-            || strpos($_SERVER['REMOTE_ADDR'], '::1')  !== false
-            || strpos($_SERVER['REMOTE_ADDR'], '0:0:0:0:0:0:0:1')  !== false
-        );
+        foreach (['REMOTE_ADDR', 'HTTP_ORIGIN'] as $header) {
+            if (!array_key_exists($header, $_SERVER)) {
+                continue;
+            }
+
+            if (strpos($_SERVER[$header], 'localhost')  !== false
+                || strpos($_SERVER[$header], '127.0.0.1')  !== false
+                || strpos($_SERVER[$header], '::1')  !== false
+                || strpos($_SERVER[$header], '0:0:0:0:0:0:0:1')  !== false
+            ) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
