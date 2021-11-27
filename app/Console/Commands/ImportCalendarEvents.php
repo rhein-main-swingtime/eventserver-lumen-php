@@ -245,7 +245,10 @@ class ImportCalendarEvents extends Command
                 $instances = $this->googleCalendar->events->instances(
                     $data['id'],
                     $event->getId(),
-                    ['timeMin' => (new DateTimeImmutable())->format('c')]
+                    [
+                        'timeMin' => $timeMin,
+                        'timeMax' => $timeMax,
+                    ]
                 );
 
                 try {
