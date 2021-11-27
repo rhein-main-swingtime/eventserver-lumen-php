@@ -10,6 +10,10 @@ class CorsMiddleware
     private function isLocalhost(): bool
     {
         foreach (['REMOTE_ADDR', 'HTTP_ORIGIN'] as $header) {
+            if (!array_key_exists($header, $_SERVER)) {
+                continue;
+            }
+
             if (strpos($_SERVER[$header], 'localhost')  !== false
                 || strpos($_SERVER[$header], '127.0.0.1')  !== false
                 || strpos($_SERVER[$header], '::1')  !== false
