@@ -18,8 +18,8 @@ class EventsController extends Controller
     {
         $this->validate($request, [
             'cities'        => 'array',
-            'skip'          => 'integer|min:1',
-            'limit'         => 'integer|min:1',
+            'skip'          => 'integer',
+            'limit'         => 'integer',
             'calendars'     => 'array',
             'categories'    => 'array',
         ]);
