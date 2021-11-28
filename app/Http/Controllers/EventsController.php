@@ -145,7 +145,7 @@ class EventsController extends Controller
     public function addDateMapping(Collection $danceEvents): \Illuminate\Support\Collection
     {
         $datesCollection = $danceEvents->mapToGroups(function ($item, $key) {
-            $startDate = (new \DateTimeImmutable($item['start_date_time']))->format('Y-n-d');
+            $startDate = (new \DateTimeImmutable($item['start_date_time']))->format('Y-m-d');
             return [$startDate => (int) $item['id']];
         });
 
