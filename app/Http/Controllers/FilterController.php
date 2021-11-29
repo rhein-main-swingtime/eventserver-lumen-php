@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Parameter\EventParameterInterface;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use Carbon\Carbon;
@@ -10,37 +11,11 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class FilterController extends Controller
+/**
+ * @todo Add Dates and pure counts for updates in frontend
+ */
+class FilterController extends Controller implements EventParameterInterface
 {
-
-    public const PARAMETER_CITY         = 'city';
-    public const PARAMETER_CATEGORY     = 'category';
-    public const PARAMETER_CALENDAR     = 'calendar';
-
-    public const PARAMETERS = [
-        self::PARAMETER_CALENDAR,
-        self::PARAMETER_CATEGORY,
-        self::PARAMETER_CITY
-    ];
-
-    private const PARAMETER_VALIDATIONS= [
-        self::PARAMETER_CALENDAR => 'array',
-        self::PARAMETER_CATEGORY => 'array',
-        self::PARAMETER_CITY => 'array',
-    ];
-
-    protected Request $request;
-
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
-    public function __construct(Request $request)
-    {
-        $this->validate($request, self::PARAMETER_VALIDATIONS);
-        $this->request = $request;
-    }
 
     /**
      * Returns Categories from DB
@@ -88,7 +63,7 @@ class FilterController extends Controller
     {
         $filters = [];
 
-        foreach (self::PARAMETERS as $cat) {
+        foreach (self::FILTER_PARAMETERS as $cat) {
             if ($cat === self::PARAMETER_CITY) {
                 $distinct = EventInstance::distinct($cat);
             } else {
@@ -100,7 +75,7 @@ class FilterController extends Controller
             $queryItems = $request->input($cat) ?? [];
 
             foreach ($items as $item) {
-                $builder = $this->generateBaseCollection();
+                $builder = $this->generateBaseCollection($request);
                 if (in_array($item, $queryItems)) {
                     $count = $builder->getQuery()->count();
                 } elseif (empty($queryItems) !==  true) {
@@ -118,19 +93,26 @@ class FilterController extends Controller
 
         return [
             'filters' => $filters,
-            'totalCount' => $this->generateBaseCollection()->get()->count(),
+            'totalCount' => $this->generateBaseCollection($request)->get()->count(),
         ];
     }
 
-    protected function generateBaseCollection(): \Illuminate\Database\Eloquent\Builder
+    protected function generateBaseCollection(Request $request): \Illuminate\Database\Eloquent\Builder
     {
-
         $instance = (new EventInstance())::query()
         ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
-        ->whereDate('end_date_time', '>=', Carbon::now()->toDateTimeString());
+        ->whereDate(
+            'end_date_time',
+            '>=',
+            Carbon::now()->toDateTimeString()
+        );
 
-        foreach (self::PARAMETERS as $param) {
-            $inputs = $this->request->input($param);
+        if ($request->get(self::PARAMETER_TO) !== null) {
+            $instance->whereDate('end_date_time', '<=', $request->get(self::PARAMETER_TO));
+        }
+
+        foreach (self::FILTER_PARAMETERS as $param) {
+            $inputs = $request->input($param);
             if ($inputs === null || !is_array($inputs)) {
                 continue;
             }
@@ -146,9 +128,10 @@ class FilterController extends Controller
      *
      * @return JsonResponse
      */
-    public function fetchFilters(): JsonResponse
+    public function fetchFilters(Request $request): JsonResponse
     {
-        $out = $this->getAvailableFilters($this->request);
+        $this->validate($request, self::VALIDATIONS);
+        $out = $this->getAvailableFilters($request);
         return response()->json($out);
     }
 }

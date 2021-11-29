@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Parameter\EventParameterInterface;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use DateTime;
@@ -9,31 +10,14 @@ use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 
-class EventsController extends Controller
+class EventsController extends Controller implements EventParameterInterface
 {
 
     private const DEFAULT_LIMIT = 25;
 
     protected function validateRequest(Request $request): void
     {
-        $this->validate($request, [
-            'cities'        => 'array',
-            'skip'          => 'integer',
-            'limit'         => 'integer',
-            'calendars'     => 'array',
-            'categories'    => 'array',
-        ]);
-    }
-
-    protected function validateEventRequest(Request $request): void
-    {
-        $this->validate(
-            $request,
-            [
-                'from'  => 'date|with:to',
-                'to'    => 'date|required|after:from',
-            ]
-        );
+        $this->validate($request, self::VALIDATIONS);
     }
 
     /**
@@ -45,26 +29,22 @@ class EventsController extends Controller
     protected function fetchEvents(Request $request): \Illuminate\Database\Eloquent\Collection
     {
 
-        $limit = (
-            $request->input('limit') === null
-            ? self::DEFAULT_LIMIT
-            : (int) $request->input('limit')
-        );
+        $limit = $request->input(self::PARAMETER_LIMIT) ?? self::DEFAULT_LIMIT;
 
         $skip = (int) $request->input('skip');
 
-        $categories = $request->input('categories');
-        $cities = $request->input('cities');
-        $calendars = $request->input('calendars');
+        $categories = $request->input(self::PARAMETER_CATEGORY);
+        $cities = $request->input(self::PARAMETER_CITY);
+        $calendars = $request->input(self::PARAMETER_CALENDAR);
 
-        $startDate = $request->input('startDate');
+        $startDate = $request->input(self::PARAMETER_FROM);
         if ($startDate === null) {
             $startDate = (new DateTime('today'))->setTime(0, 0, 0);
         } else {
             $startDate = (new DateTime($startDate));
         }
 
-        $endDate = $request->input('endDate');
+        $endDate = $request->input(self::PARAMETER_TO);
         if ($endDate === null) {
             $endDate = (new DateTime('last day of this month'))->setTime(23, 59, 59);
         } else {
@@ -95,48 +75,6 @@ class EventsController extends Controller
     }
 
     /**
-     * Returns Categories from DB
-     *
-     * @return string[]
-     */
-    protected function fetchCategories(): array
-    {
-        return array_values(
-            CalendarEvent::distinct('category')
-            ->pluck('category')
-            ->toArray()
-        );
-    }
-
-    /**
-     * Returns Categories from DB
-     *
-     * @return string[]
-     */
-    protected function fetchCalendars(): array
-    {
-        return array_values(
-            CalendarEvent::distinct('calendar')
-            ->pluck('calendar')
-            ->toArray()
-        );
-    }
-
-    /**
-     * Returns Cities from DB
-     *
-     * @return string[]
-     */
-    protected function fetchCities(): array
-    {
-        return array_values(
-            EventInstance::distinct('city')
-            ->pluck('city')
-            ->toArray()
-        );
-    }
-
-    /**
      * Adds mapping between dates and events
      *
      * @param Collection $danceEvents Dance events collection
@@ -164,9 +102,6 @@ class EventsController extends Controller
         return response()->json([
             'dates'         => $dates,
             'danceEvents'   => $danceEvents,
-            'categories'    => $this->fetchCategories(''),
-            'cities'        => $this->fetchCities(''),
-            'calendars'     => $this->fetchCalendars(),
         ]);
     }
 }
