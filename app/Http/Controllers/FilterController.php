@@ -84,11 +84,11 @@ class FilterController extends Controller
         }
     }
 
-    protected function getAvailableFilters(Request $request): array {
+    protected function getAvailableFilters(Request $request): array
+    {
         $filters = [];
 
         foreach (self::PARAMETERS as $cat) {
-
             if ($cat === self::PARAMETER_CITY) {
                 $distinct = EventInstance::distinct($cat);
             } else {
@@ -102,18 +102,17 @@ class FilterController extends Controller
             foreach ($items as $item) {
                 $builder = $this->generateBaseCollection();
                 if (in_array($item, $queryItems)) {
-                    $count = $builder->getQuery()->exists();
-                } else if (empty($queryItems) !==  true) {
-                    $count = $builder->orWhere($cat, $item)->getQuery()->exists();
+                    $count = $builder->getQuery()->count();
+                } elseif (empty($queryItems) !==  true) {
+                    $count = $builder->orWhere($cat, $item)->getQuery()->count();
                 } else {
-                    $count = $builder->where($cat, $item)->getQuery()->exists();
+                    $count = $builder->where($cat, $item)->getQuery()->count();
                 }
 
                 $filters[$cat][] = [
                     'name' => $item,
                     'available' => $count
                 ];
-
             }
         }
 
