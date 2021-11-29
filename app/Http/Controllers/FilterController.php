@@ -122,7 +122,8 @@ class FilterController extends Controller
         ];
     }
 
-    protected function generateBaseCollection(): \Illuminate\Database\Eloquent\Builder {
+    protected function generateBaseCollection(): \Illuminate\Database\Eloquent\Builder
+    {
 
         $instance = (new EventInstance())::query()
         ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
@@ -138,7 +139,6 @@ class FilterController extends Controller
         }
 
         return $instance;
-
     }
 
     /**
@@ -151,9 +151,4 @@ class FilterController extends Controller
         $out = $this->getAvailableFilters($this->request);
         return response()->json($out);
     }
-
-    public function getTotalCount(string $version, Request $request): JsonResponse {
-        return response()->json($out);
-    }
-
 }
