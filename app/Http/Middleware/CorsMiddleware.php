@@ -7,6 +7,12 @@ use Illuminate\Support\Facades\Log;
 class CorsMiddleware
 {
 
+    private const ALLOWED_ORIGINS = [
+        'soontobe.rmswing.de',
+        'hugo.rmswing.de',
+        'rmswing.de'
+    ];
+
     private function isLocalhost(): bool
     {
         foreach (['REMOTE_ADDR', 'HTTP_ORIGIN'] as $header) {
@@ -25,6 +31,22 @@ class CorsMiddleware
         return false;
     }
 
+    private function isAllowedOrigin()
+    {
+
+        foreach (['REMOTE_ADDR', 'HTTP_ORIGIN'] as $header) {
+            if (!array_key_exists($header, $_SERVER)) {
+                continue;
+            }
+            foreach (self::ALLOWED_ORIGINS as $val) {
+                if (strpos($_SERVER[$header], $val)  !== false) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -34,12 +56,12 @@ class CorsMiddleware
      */
     public function handle($request, Closure $next)
     {
-
         if ($this->isLocalhost()) {
             $allowed_origin = '*';
+        } elseif ($this->isAllowedOrigin()) {
+            $allowed_origin = $_SERVER['ORIGIN'] ?? $_SERVER['HTTP_ORIGIN'] ?? $_SERVER['REMOTE_ADDR'];
         } else {
-            $protocol = !empty($_SERVER['HTTPS']) ? 'https://' : 'http://';
-            $allowed_origin = $protocol . 'soontobe.rmswing.de';
+            return $next($request);
         }
 
         $headers = [
