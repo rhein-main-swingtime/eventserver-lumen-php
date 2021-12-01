@@ -85,7 +85,6 @@ class EventsController extends Controller implements EventParameterInterface
 
     public function searchEvents(Request $request): \Illuminate\Http\JsonResponse
     {
-
         $this->validateRequest($request);
         $ids = $this->getIdsFromSearchRequest($request);
         return response()->json(
@@ -93,7 +92,6 @@ class EventsController extends Controller implements EventParameterInterface
             ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
             ->whereIn('event_instances.id', $ids)->get()
         );
-
     }
     /**
      * Adds mapping between dates and events
