@@ -22,8 +22,13 @@ $router->get('/', function () use ($router) {
 });
 
 $router->get(
-    'events' . api::VersionParam() . '[/]',
+    'events' . api::VersionParam() . '/list[/]',
     ['uses' => (new \ReflectionClass(EventsController::class))->getShortName() . '@listEvents']
+);
+
+$router->get(
+    'events' . api::VersionParam() . '/search[/]',
+    ['uses' => (new \ReflectionClass(EventsController::class))->getShortName() . '@searchEvents']
 );
 
 $router->get(

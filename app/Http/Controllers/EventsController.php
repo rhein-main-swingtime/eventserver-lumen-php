@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Parameter\EventParameterInterface;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
+use Composer\Util\Http\Response;
 use DateTime;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,7 +31,6 @@ class EventsController extends Controller implements EventParameterInterface
     {
 
         $limit = $request->input(self::PARAMETER_LIMIT) ?? self::DEFAULT_LIMIT;
-
         $skip = (int) $request->input('skip');
 
         $categories = $request->input(self::PARAMETER_CATEGORY);
@@ -74,6 +74,27 @@ class EventsController extends Controller implements EventParameterInterface
         return $query->get();
     }
 
+    protected function getIdsFromSearchRequest(Request $request): ?array
+    {
+        $ids = [];
+        foreach ((array) $request->get(self::PARAMETER_ID) as $v) {
+            $ids[] = (int) $v;
+        }
+        return $ids;
+    }
+
+    public function searchEvents(Request $request): \Illuminate\Http\JsonResponse
+    {
+
+        $this->validateRequest($request);
+        $ids = $this->getIdsFromSearchRequest($request);
+        return response()->json(
+            (new EventInstance())
+            ->join('calendar_events', 'calendar_events.event_id', '=', 'event_instances.event_id')
+            ->whereIn('event_instances.id', $ids)->get()
+        );
+
+    }
     /**
      * Adds mapping between dates and events
      *
@@ -101,7 +122,7 @@ class EventsController extends Controller implements EventParameterInterface
 
         return response()->json([
             'dates'         => $dates,
-            'danceEvents'   => $danceEvents,
+            'danceEvents'   => $danceEvents
         ]);
     }
 }

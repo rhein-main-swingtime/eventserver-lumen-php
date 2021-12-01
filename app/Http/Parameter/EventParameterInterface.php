@@ -11,6 +11,8 @@ interface EventParameterInterface
     public const PARAMETER_LIMIT        = 'limit';
     public const PARAMETER_SKIP         = 'skip';
     public const PARAMETER_TO           = 'to';
+    public const PARAMETER_ID           = 'id';
+    public const PARAMETER_QUERY        = 'q';
 
     public const FILTER_PARAMETERS = [
         self::PARAMETER_CALENDAR,
@@ -36,5 +38,6 @@ interface EventParameterInterface
         self::PARAMETER_LIMIT       => 'integer',
         self::PARAMETER_SKIP        => 'integer',
         self::PARAMETER_TO          => 'date|after:from',
+        self::PARAMETER_QUERY       => 'string'
     ];
 }
