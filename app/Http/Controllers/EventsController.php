@@ -45,10 +45,8 @@ class EventsController extends Controller implements EventParameterInterface
         }
 
         $endDate = $request->input(self::PARAMETER_TO);
-        if ($endDate === null) {
-            $endDate = (new DateTime('last day of this month'))->setTime(23, 59, 59);
-        } else {
-            $endDate = (new DateTime($endDate));
+        if ($endDate) {
+            $endDate = (new DateTime($endDate))->setTime(23, 59, 59);
         }
 
         $query = (new EventInstance())
@@ -62,14 +60,18 @@ class EventsController extends Controller implements EventParameterInterface
             ->when($calendars, function ($query, $calendars) {
                 $query->wherein('calendar', $calendars);
             })
-            ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB))
-            ->orderBy('start_date_time', 'ASC');
+            ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB));
+
+        if ($endDate !== null) {
+            $query->whereDate('end_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB));
+        }
 
         if ($skip > 0) {
             $query->skip($skip);
         }
-
         $query->limit($limit);
+
+        $query->orderBy('start_date_time', 'ASC');
 
         return $query->get();
     }
