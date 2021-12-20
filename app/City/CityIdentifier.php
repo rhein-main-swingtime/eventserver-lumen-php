@@ -111,8 +111,13 @@ class CityIdentifier
         }
     }
 
-    public function identifyCity(string &$summary, string $longtext): string
+    public function identifyCity(?string &$summary, string $longtext): string
     {
+        $fallback = 'Andere';
+
+        if (empty($summary)) {
+            return $fallback;
+        }
 
         $parts = explode(' ', $summary, 2);
         $prefix = array_shift($parts);
@@ -133,6 +138,6 @@ class CityIdentifier
             }
         }
 
-        return 'Andere';
+        return $fallback;
     }
 }
