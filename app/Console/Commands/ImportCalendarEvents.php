@@ -190,8 +190,9 @@ class ImportCalendarEvents extends Command
                 'foreign_url'               => $instance->htmlLink,
                 'start_date_time'           => $instance->getStart(),
                 'end_date_time'             => $instance->getEnd(),
-                'start_date_time_offset'    => $this->getOffset($instance->getStart()),
-                'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                // @todo Unfuck these next 2 lines.
+                'start_date_time_offset'    => $this->getOffset($instance->getStart() ?? new DateTimeImmutable(0)),
+                'end_date_time_offset'      => $this->getOffset($instance->getStart() ?? new DateTimeImmutable(0)),
             ]
         );
 
