@@ -167,8 +167,8 @@ class ImportCalendarEvents extends Command
         $city = $this->cityIdentifier->identifyCity(
             $summary,
             implode('\n', [
-                $instance->summary,
-                $instance->location,
+                $instance->summary ?? '',
+                $instance->location ?? '',
                 $instance->description ?? ''
             ])
         );
