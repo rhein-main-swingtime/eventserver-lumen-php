@@ -192,10 +192,10 @@ class ImportCalendarEvents extends Command
                 'start_date_time'           => $instance->getStart() ?? new DateTimeImmutable(0),
                 'end_date_time'             => $instance->getEnd() ?? new DateTimeImmutable(0),
                 // @todo Unfuck these next 2 calls.
-                'start_date_time_offset'    => !$instance->getStart()
+                'start_date_time_offset'    => $instance->getStart() === null
                     ? null
                     : $this->getOffset($instance->getStart()),
-                'end_date_time_offset'      => !$instance->getEnd()
+                'end_date_time_offset'      => $instance->getEnd() === null
                     ? null
                     : $this->getOffset($instance->getEnd()),
             ]
