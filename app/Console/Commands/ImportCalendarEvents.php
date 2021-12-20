@@ -178,6 +178,7 @@ class ImportCalendarEvents extends Command
                 'instance_id' => $instance_id,
                 'event_id'    => $eventId,
             ],
+
             [
                 'instance_id'               => $instance_id,
                 'event_id'                  => $eventId,
@@ -188,11 +189,15 @@ class ImportCalendarEvents extends Command
                 'location'                  => $instance->getLocation(),
                 'city'                      => $city,
                 'foreign_url'               => $instance->htmlLink,
-                'start_date_time'           => $instance->getStart(),
-                'end_date_time'             => $instance->getEnd(),
-                // @todo Unfuck these next 2 lines.
-                'start_date_time_offset'    => $this->getOffset($instance->getStart() ?? new DateTimeImmutable(0)),
-                'end_date_time_offset'      => $this->getOffset($instance->getStart() ?? new DateTimeImmutable(0)),
+                'start_date_time'           => $instance->getStart() ?? new DateTimeImmutable(0),
+                'end_date_time'             => $instance->getEnd() ?? new DateTimeImmutable(0),
+                // @todo Unfuck these next 2 calls.
+                'start_date_time_offset'    => !$instance->getStart()
+                    ? null
+                    : $this->getOffset($instance->getStart()),
+                'end_date_time_offset'      => !$instance->getEnd()
+                    ? null
+                    : $this->getOffset($instance->getEnd()),
             ]
         );
 
