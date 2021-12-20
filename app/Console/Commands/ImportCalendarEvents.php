@@ -159,11 +159,17 @@ class ImportCalendarEvents extends Command
         return $this->danceEventSanitizer->sanitize($desc);
     }
 
-    private function updateOrCreateEventInstance(string $eventId, $instance): string
+    private function updateOrCreateEventInstance(string $eventId, $instance): ?string
     {
         $instance_id = $instance->getId();
 
         $summary = $instance->getSummary();
+
+        if ($summary === null || $instance->getEnd() === null || $instance->getStart() === null) {
+            Log::error('Strange Event found, please check: ' . $instance->htmlLink . PHP_EOL . json_encode($instance));
+            return null;
+        }
+
         $city = $this->cityIdentifier->identifyCity(
             $summary,
             implode('\n', [
@@ -286,13 +292,19 @@ class ImportCalendarEvents extends Command
                     foreach ($instanceItems as $instance) {
                         try {
                             $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $instance);
-                            $updated['instances']++;
                         } catch (\Exception $e) {
                             Log::error($e->getMessage());
                             continue;
                         }
                     }
                 }
+
+                $updatedInstanceIDs = array_filter(
+                    $updatedInstanceIDs,
+                    function ($i) {
+                        return $i !== null;
+                    }
+                );
 
                 if (count($updatedInstanceIDs)) {
                     $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
@@ -306,7 +318,7 @@ class ImportCalendarEvents extends Command
 
         return [
             'status'    => $status,
-            'updated'   => $updated,
+            'updated'   => count($updatedInstanceIDs),
             'deleted'   => $deleted,
             'errors'    => count($errors) > 0 ? $errors : 'none',
         ];
