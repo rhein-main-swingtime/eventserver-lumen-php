@@ -144,8 +144,12 @@ class ImportCalendarEvents extends Command
         return $name;
     }
 
-    private function getOffset(\Google\Service\Calendar\EventDateTime $date): float
+    private function getOffset(?\Google\Service\Calendar\EventDateTime $date): float
     {
+        if ($date === null) {
+            return 0;
+        }
+
         $val = substr($date->dateTime, -6);
         return floatval($val);
     }
