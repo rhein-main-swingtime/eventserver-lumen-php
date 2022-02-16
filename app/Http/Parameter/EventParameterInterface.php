@@ -38,6 +38,8 @@ interface EventParameterInterface
         self::PARAMETER_LIMIT       => 'integer',
         self::PARAMETER_SKIP        => 'integer',
         self::PARAMETER_TO          => 'date|after:from',
-        self::PARAMETER_QUERY       => 'string'
+        self::PARAMETER_QUERY       => 'string',
+        self::PARAMETER_ID          => 'array',
+        self::PARAMETER_ID.'.*'     => 'integer',
     ];
 }

@@ -37,6 +37,8 @@ class EventsController extends Controller implements EventParameterInterface
         $cities = $request->input(self::PARAMETER_CITY);
         $calendars = $request->input(self::PARAMETER_CALENDAR);
 
+        $ids = $this->getIdsFromSearchRequest($request);
+
         $startDate = $request->input(self::PARAMETER_FROM);
         if ($startDate === null) {
             $startDate = (new DateTime('today'))->setTime(0, 0, 0);
@@ -60,7 +62,8 @@ class EventsController extends Controller implements EventParameterInterface
             ->when($calendars, function ($query, $calendars) {
                 $query->wherein('calendar', $calendars);
             })
-            ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB));
+            ->whereDate('start_date_time', '>=', $startDate->format(EventInstance::DATE_TIME_FORMAT_DB))
+        ;
 
         if ($endDate !== null) {
             $query->whereDate('end_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB));
@@ -69,6 +72,11 @@ class EventsController extends Controller implements EventParameterInterface
         if ($skip > 0) {
             $query->skip($skip);
         }
+
+        if (count($ids) > 0) {
+            $query->whereIn('event_instances.id', $ids);
+        }
+
         $query->limit($limit);
 
         $query->orderBy('start_date_time', 'ASC');
@@ -116,11 +124,17 @@ class EventsController extends Controller implements EventParameterInterface
      */
     public function listEvents(Request $request)
     {
+
         $this->validateRequest($request);
         $danceEvents = $this->fetchEvents($request);
         $dates = $this->addDateMapping($danceEvents);
 
+
         return response()->json([
+            'count' => [
+                'search' => $request->input(self::PARAMETER_LIMIT) ?? self::DEFAULT_LIMIT,
+                'result' => count($danceEvents)
+            ],
             'dates'         => $dates,
             'danceEvents'   => $danceEvents
         ]);
