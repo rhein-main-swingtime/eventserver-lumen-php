@@ -33,7 +33,7 @@ class EventsController extends Controller implements EventParameterInterface
         $limit = $request->input(self::PARAMETER_LIMIT) ?? self::DEFAULT_LIMIT;
         $skip = (int) $request->input('skip');
 
-        $categories = $request->input(self::PARAMETER_CATEGORY);
+        $categories = $request->input(self::PARAMETER_CATEGORY) ?? ['socials']; // @todo this sucks, clean it up
         $cities = $request->input(self::PARAMETER_CITY);
         $calendars = $request->input(self::PARAMETER_CALENDAR);
 
