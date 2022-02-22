@@ -176,29 +176,32 @@ class ImportCalendarEvents extends Command
                 $instance->description ?? ''
             ])
         );
-
-        EventInstance::updateOrCreate(
-            [
-                'instance_id' => $instance_id,
-                'event_id'    => $eventId,
-            ],
-            [
-                'instance_id'               => $instance_id,
-                'event_id'                  => $eventId,
-                'summary'                   => $summary,
-                'description'               => $this->getSanitizedDesc(
-                    $instance->getDescription() ?? ''
-                ),
-                'location'                  => $instance->getLocation(),
-                'city'                      => $city,
-                'foreign_url'               => $instance->htmlLink,
-                'start_date_time'           => $instance->getStart(),
-                'end_date_time'             => $instance->getEnd(),
-                'start_date_time_offset'    => $this->getOffset($instance->getStart()),
-                'end_date_time_offset'      => $this->getOffset($instance->getStart()),
-            ]
-        );
-
+        try {
+            EventInstance::updateOrCreate(
+                [
+                    'instance_id' => $instance_id,
+                    'event_id'    => $eventId,
+                ],
+                [
+                    'instance_id'               => $instance_id,
+                    'event_id'                  => $eventId,
+                    'summary'                   => $summary,
+                    'description'               => $this->getSanitizedDesc(
+                        $instance->getDescription() ?? ''
+                    ),
+                    'location'                  => $instance->getLocation(),
+                    'city'                      => $city,
+                    'foreign_url'               => $instance->htmlLink,
+                    'start_date_time'           => $instance->getStart(),
+                    'end_date_time'             => $instance->getEnd(),
+                    'start_date_time_offset'    => $this->getOffset($instance->getStart()),
+                    'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                ]
+            );
+        } catch (\Exception $e) {
+            var_dump($e->getMessage());
+            var_dump($instance);
+        }
         return $instance_id;
     }
 
