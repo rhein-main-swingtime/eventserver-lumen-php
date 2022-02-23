@@ -163,10 +163,10 @@ class ImportCalendarEvents extends Command
         return $this->danceEventSanitizer->sanitize($desc);
     }
 
-    private function updateOrCreateEventInstance(string $eventId, $instance): string
+    private function updateOrCreateEventInstance(string $eventId, $instance): ?string
     {
+        /* @var Google\Service\Calendar\Event $instance */
         $instance_id = $instance->getId();
-
         $summary = $instance->getSummary();
         $city = $this->cityIdentifier->identifyCity(
             $summary,
@@ -199,8 +199,8 @@ class ImportCalendarEvents extends Command
                 ]
             );
         } catch (\Exception $e) {
-            var_dump($e->getMessage());
-            var_dump($instance);
+            Log::error($e->getMessage());
+            return null;
         }
         return $instance_id;
     }
@@ -276,12 +276,19 @@ class ImportCalendarEvents extends Command
                     $updatedEventIDs[] = $eventId;
                     $updated['events']++;
                 } catch (\Exception $e) {
-                    Log::error($e->getMessage());
+                    $errors[] = $eventId;
+                    Log::error(
+                        "Error creating event",
+                        [
+                            $eventId,
+                            $e->getMessage()
+                        ]
+                    );
                 }
 
                 $instanceItems =  $instances->getItems();
 
-                if (count($instanceItems) === 0) {
+                if (count($instanceItems) === 0 && $event->getStartDate) {
                     $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $event);
                 } else {
                     foreach ($instanceItems as $instance) {
@@ -289,11 +296,20 @@ class ImportCalendarEvents extends Command
                             $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $instance);
                             $updated['instances']++;
                         } catch (\Exception $e) {
-                            Log::error($e->getMessage());
+                            $errors[] = $eventId;
+                            Log::error(
+                                "Error creating instance",
+                                [
+                                    $eventId,
+                                    $e->getMessage()
+                                ]
+                            );
                             continue;
                         }
                     }
                 }
+
+                $updatedInstanceIDs = array_filter($updatedInstanceIDs);
 
                 if (count($updatedInstanceIDs)) {
                     $deleted['instances'] += $this->removeOutdatedInstances($eventId, $updatedInstanceIDs);
