@@ -15,6 +15,7 @@ class EventsController extends Controller implements EventParameterInterface
 {
 
     private const DEFAULT_LIMIT = 25;
+    private const DEFAULT_CATEGORIES = ['socials'];
 
     protected function validateRequest(Request $request): void
     {
@@ -33,9 +34,13 @@ class EventsController extends Controller implements EventParameterInterface
         $limit = $request->input(self::PARAMETER_LIMIT) ?? self::DEFAULT_LIMIT;
         $skip = (int) $request->input('skip');
 
-        $categories = $request->input(self::PARAMETER_CATEGORY);
         $cities = $request->input(self::PARAMETER_CITY);
         $calendars = $request->input(self::PARAMETER_CALENDAR);
+        $categories = $request->input(self::PARAMETER_CATEGORY);
+
+        if (!$categories && !$calendars) {
+            $categories = self::DEFAULT_CATEGORIES;
+        }
 
         $ids = $this->getIdsFromSearchRequest($request);
 
