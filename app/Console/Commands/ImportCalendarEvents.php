@@ -286,7 +286,6 @@ class ImportCalendarEvents extends Command
                     $updatedEventIDs[] = $eventId;
                     $updated['events']++;
                 } catch (\Exception $e) {
-                    var_dump($e->getMessage());
                     $errors[] = $eventId;
                     Log::error(
                         "Error creating event",
