@@ -242,6 +242,11 @@ class ImportCalendarEvents extends Command
                 $eventId = $event->getId();
                 $recurrence = $event->getRecurrence();
 
+                if ($event->getSummary() === 'Swing Attacke') {
+                    print_r($event);
+                }
+
+
                 if (gettype($recurrence) === 'array') {
                     $recurrence = implode(' | ', $recurrence);
                 }
@@ -256,6 +261,12 @@ class ImportCalendarEvents extends Command
                         'timeMax' => $timeMax,
                     ]
                 );
+
+
+                if ($event->getSummary() === 'Swing Attacke') {
+                    print_r($instances);
+                }
+
 
                 try {
                     CalendarEvent::updateOrCreate(
@@ -275,6 +286,7 @@ class ImportCalendarEvents extends Command
                     $updatedEventIDs[] = $eventId;
                     $updated['events']++;
                 } catch (\Exception $e) {
+                    var_dump($e->getMessage());
                     $errors[] = $eventId;
                     Log::error(
                         "Error creating event",
@@ -287,7 +299,15 @@ class ImportCalendarEvents extends Command
 
                 $instanceItems =  $instances->getItems();
 
-                if (count($instanceItems) === 0 && $event->getStartDate) {
+                if ($event->getSummary() === 'Swing Attacke') {
+
+                    /** @var $event EventsModel */
+                    print_r($instanceItems);
+                    print_r($event->start->dateTime);
+                }
+
+
+                if (count($instanceItems) === 0 && $event->start->dateTime) {
                     $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $event);
                 } else {
                     foreach ($instanceItems as $instance) {
