@@ -11,7 +11,6 @@ use Illuminate\Console\Command;
 use App\Models\EventInstance;
 use App\Models\CalendarEvent;
 use DateTimeImmutable;
-use Exception;
 use Log;
 use Google\Service\Calendar;
 use HtmlSanitizer\SanitizerInterface;
@@ -232,7 +231,8 @@ class ImportCalendarEvents extends Command
             'maxResults' => 2500,
             'singleEvents' => false,
             'timeMin' => $timeMin,
-            'timeMax' => $timeMax
+            'timeMax' => $timeMax,
+            'showHiddenInvitations' => true,
         ];
 
         foreach ($this->getSources() as $name => $data) {
@@ -240,7 +240,6 @@ class ImportCalendarEvents extends Command
 
             foreach ($eventList as $event) {
                 $eventId = $event->getId();
-
                 $recurrence = $event->getRecurrence();
 
                 if (gettype($recurrence) === 'array') {
