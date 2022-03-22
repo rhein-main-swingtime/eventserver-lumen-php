@@ -232,13 +232,17 @@ class ImportCalendarEvents extends Command
             'singleEvents' => false,
             'timeMin' => $timeMin,
             'timeMax' => $timeMax,
-            'showHiddenInvitations' => true,
+            // 'showHiddenInvitations' => true,
         ];
 
         foreach ($this->getSources() as $name => $data) {
             $eventList = $this->googleCalendar->events->listEvents($data['id'], $parameters);
 
             foreach ($eventList as $event) {
+                if ($event->status === 'cancelled') {
+                    continue;
+                }
+
                 $eventId = $event->getId();
                 $recurrence = $event->getRecurrence();
 
@@ -285,9 +289,10 @@ class ImportCalendarEvents extends Command
                     );
                 }
 
+                /** @var []Google\Service\Calendar\Event */
                 $instanceItems =  $instances->getItems();
 
-                if (count($instanceItems) === 0 && $event->start->dateTime) {
+                if (count($instanceItems) === 0) {
                     $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $event);
                 } else {
                     foreach ($instanceItems as $instance) {
