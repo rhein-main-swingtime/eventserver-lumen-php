@@ -6,8 +6,6 @@ use App\Http\Parameter\EventParameterInterface;
 use App\Models\CalendarEvent;
 use App\Models\EventInstance;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,9 +14,8 @@ use Illuminate\Http\Request;
  */
 class FilterController extends Controller implements EventParameterInterface
 {
-
     /**
-     * Returns Categories from DB
+     * Returns Categories from DB.
      *
      * @return string[]
      */
@@ -41,7 +38,7 @@ class FilterController extends Controller implements EventParameterInterface
 
             $out[$category] = [
                 'count' => $count,
-                'selected' => in_array($category, $selected)
+                'selected' => in_array($category, $selected),
             ];
         }
 
@@ -59,6 +56,15 @@ class FilterController extends Controller implements EventParameterInterface
         }
     }
 
+    protected function sortFilters(array $filters): array
+    {
+        uasort($filters, function ($a, $b) {
+            return strcmp($a['name'], $b['name']);
+        });
+
+        return $filters;
+    }
+
     protected function getAvailableFilters(Request $request): array
     {
         $filters = [];
@@ -71,14 +77,15 @@ class FilterController extends Controller implements EventParameterInterface
             }
 
             $filters[$cat] = [];
-            $items = $distinct->pluck($cat)->toArray();
+            $items = $distinct->pluck($cat)->toArray() ?? [];
+            sort($items);
             $queryItems = $request->input($cat) ?? [];
 
             foreach ($items as $item) {
                 $builder = $this->generateBaseCollection($request);
                 if (in_array($item, $queryItems)) {
                     $count = $builder->getQuery()->count();
-                } elseif (empty($queryItems) !==  true) {
+                } elseif (empty($queryItems) !== true) {
                     $count = $builder->orWhere($cat, $item)->getQuery()->count();
                 } else {
                     $count = $builder->where($cat, $item)->getQuery()->count();
@@ -86,7 +93,7 @@ class FilterController extends Controller implements EventParameterInterface
 
                 $filters[$cat][] = [
                     'name' => $item,
-                    'available' => $count
+                    'available' => $count,
                 ];
             }
         }
@@ -124,14 +131,13 @@ class FilterController extends Controller implements EventParameterInterface
     }
 
     /**
-     * Returns filters as array
-     *
-     * @return JsonResponse
+     * Returns filters as array.
      */
     public function fetchFilters(Request $request): JsonResponse
     {
         $this->validate($request, self::VALIDATIONS);
         $out = $this->getAvailableFilters($request);
+
         return response()->json($out);
     }
 }
