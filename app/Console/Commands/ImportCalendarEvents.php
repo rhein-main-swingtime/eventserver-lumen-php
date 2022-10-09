@@ -6,6 +6,7 @@
 
 namespace App\Console\Commands;
 
+use Carbon\Carbon;
 use App\City\CityIdentifier;
 use Illuminate\Console\Command;
 use App\Models\EventInstance;
@@ -90,7 +91,7 @@ class ImportCalendarEvents extends Command
     private function removeOutdatedInstances(string $eventId, array $ids): int
     {
         return EventInstance::where('event_id', $eventId)
-            ->whereNotIn('instance_id', $ids)
+            ->whereNotIn('id', $ids)
             ->delete();
     }
 
@@ -162,11 +163,20 @@ class ImportCalendarEvents extends Command
         return $this->danceEventSanitizer->sanitize($desc);
     }
 
+    private function unfuckDate(\Google\Service\Calendar\EventDateTime $value): string
+    {
+        $val = $value->getDateTime() ?? $value->getDate();
+        $tz = $value->getTimeZone();
+
+        return (Carbon::parse($val, $tz))->format(EventInstance::DATE_TIME_FORMAT_DB);
+    }
+
     private function updateOrCreateEventInstance(string $eventId, $instance): ?string
     {
         /* @var Google\Service\Calendar\Event $instance */
         $instance_id = $instance->getId();
         $summary = $instance->getSummary();
+
         $city = $this->cityIdentifier->identifyCity(
             $summary,
             implode('\n', [
@@ -176,10 +186,11 @@ class ImportCalendarEvents extends Command
             ])
         );
         try {
-            EventInstance::updateOrCreate(
+            $dbInstance = EventInstance::updateOrCreate(
                 [
-                    'instance_id' => $instance_id,
-                    'event_id'    => $eventId,
+                    'summary'                   => $summary,
+                    'start_date_time'           => $this->unfuckDate($instance->getStart()),
+                    'end_date_time'             => $this->unfuckDate($instance->getEnd()),
                 ],
                 [
                     'instance_id'               => $instance_id,
@@ -191,17 +202,17 @@ class ImportCalendarEvents extends Command
                     'location'                  => $instance->getLocation(),
                     'city'                      => $city,
                     'foreign_url'               => $instance->htmlLink,
-                    'start_date_time'           => $instance->getStart(),
-                    'end_date_time'             => $instance->getEnd(),
+                    'start_date_time'           => $this->unfuckDate($instance->getStart()),
+                    'end_date_time'             => $this->unfuckDate($instance->getEnd()),
                     'start_date_time_offset'    => $this->getOffset($instance->getStart()),
                     'end_date_time_offset'      => $this->getOffset($instance->getStart()),
                 ]
             );
+            return $dbInstance->id;
         } catch (\Exception $e) {
             Log::error($e->getMessage());
             return null;
         }
-        return $instance_id;
     }
 
     /**

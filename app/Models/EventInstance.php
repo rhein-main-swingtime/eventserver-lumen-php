@@ -110,27 +110,9 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
      */
     protected $hidden = [];
 
-    private function unfuckDate(\Google\Service\Calendar\EventDateTime $value): string
-    {
-        $val = $value->getDateTime() ?? $value->getDate();
-        $tz = $value->getTimeZone();
-
-        return (Carbon::parse($val, $tz))->format(self::DATE_TIME_FORMAT_DB);
-    }
-
-    public function setStartDateTimeAttribute(\Google\Service\Calendar\EventDateTime $value): void
-    {
-        $this->attributes['start_date_time'] = $this->unfuckDate($value);
-    }
-
     public function getStartDateTimeAttribute(string $start_date_time): string
     {
         return (new \DateTime($start_date_time))->format(self::DATE_TIME_FORMAT_JS);
-    }
-
-    public function setEndDateTimeAttribute(\Google\Service\Calendar\EventDateTime $value): void
-    {
-        $this->attributes['end_date_time'] = $this->unfuckDate($value);
     }
 
     public function getEndDateTimeAttribute(string $end_date_time): string
