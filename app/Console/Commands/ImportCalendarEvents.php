@@ -11,9 +11,11 @@ use App\City\CityIdentifier;
 use Illuminate\Console\Command;
 use App\Models\EventInstance;
 use App\Models\CalendarEvent;
+use DateTime;
 use DateTimeImmutable;
 use Log;
 use Google\Service\Calendar;
+use Google\Service\Classroom\Form;
 use HtmlSanitizer\SanitizerInterface;
 
 /**
@@ -79,6 +81,11 @@ class ImportCalendarEvents extends Command
         }
 
         return $sources;
+    }
+
+    private function removeOldInstances(): int {
+        $cutoffTime = (new DateTime('-1 month'))->format('Y-m-d h:i:s');
+        return EventInstance::where('end_date_time', '<', $cutoffTime)->delete();
     }
 
     /**
@@ -188,9 +195,8 @@ class ImportCalendarEvents extends Command
         try {
             $dbInstance = EventInstance::updateOrCreate(
                 [
-                    'summary'                   => $summary,
-                    'start_date_time'           => $this->unfuckDate($instance->getStart()),
-                    'end_date_time'             => $this->unfuckDate($instance->getEnd()),
+                    'instance_id'               => $instance_id,
+                    'event_id'                  => $eventId,
                 ],
                 [
                     'instance_id'               => $instance_id,
@@ -223,6 +229,8 @@ class ImportCalendarEvents extends Command
     public function importAll(): array
     {
 
+        $this->removeOldInstances(); // a little housekeeping
+
         $updated = [
             'instances' => 0,
             'events' => 0,
@@ -243,6 +251,7 @@ class ImportCalendarEvents extends Command
             'singleEvents' => false,
             'timeMin' => $timeMin,
             'timeMax' => $timeMax,
+            'showDeleted' => true,
             // 'showHiddenInvitations' => true,
         ];
 
