@@ -195,8 +195,10 @@ class ImportCalendarEvents extends Command
         try {
             $dbInstance = EventInstance::updateOrCreate(
                 [
+                    'summary'                   => $summary,
+                    'start_date_time'           => $this->unfuckDate($instance->getStart()),
+                    'end_date_time'             => $this->unfuckDate($instance->getEnd()),
                     'instance_id'               => $instance_id,
-                    'event_id'                  => $eventId,
                 ],
                 [
                     'instance_id'               => $instance_id,
