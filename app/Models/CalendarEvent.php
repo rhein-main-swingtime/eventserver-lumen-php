@@ -86,7 +86,8 @@ class CalendarEvent extends Model implements AuthenticatableContract, Authorizab
         'created',
         'category',
         'event_id',
-        'recurrence'
+        'recurrence',
+        'serialized'
     ];
 
     protected $dates = [

@@ -182,6 +182,7 @@ class ImportCalendarEvents extends Command
     {
         /* @var Google\Service\Calendar\Event $instance */
         $instance_id = $instance->getId();
+
         $summary = $instance->getSummary();
 
         $city = $this->cityIdentifier->identifyCity(
@@ -193,6 +194,8 @@ class ImportCalendarEvents extends Command
             ])
         );
         try {
+
+
             $dbInstance = EventInstance::updateOrCreate(
                 [
                     'summary'                   => $summary,
@@ -214,6 +217,7 @@ class ImportCalendarEvents extends Command
                     'end_date_time'             => $this->unfuckDate($instance->getEnd()),
                     'start_date_time_offset'    => $this->getOffset($instance->getStart()),
                     'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                    'serialized'                => json_encode($instance),
                 ]
             );
             return $dbInstance->id;
@@ -295,7 +299,8 @@ class ImportCalendarEvents extends Command
                             'category'      => $data['category'],
                             'updated'       => $event->getUpdated(),
                             'created'       => $event->getCreated(),
-                            'recurrence'    => $recurrence
+                            'recurrence'    => $recurrence,
+                            'serialized'    => json_encode($event),
                         ]
                     );
                     $updatedEventIDs[] = $eventId;
