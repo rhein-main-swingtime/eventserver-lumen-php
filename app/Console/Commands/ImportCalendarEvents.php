@@ -85,7 +85,7 @@ class ImportCalendarEvents extends Command
 
     private function removeOldInstances(): int {
         $cutoffTime = (new DateTime('-1 month'))->format('Y-m-d h:i:s');
-        return EventInstance::where('end_date_time', '>', $cutoffTime)->delete();
+        return EventInstance::where('end_date_time', '<', $cutoffTime)->delete();
     }
 
     /**
