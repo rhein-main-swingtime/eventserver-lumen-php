@@ -178,11 +178,14 @@ class ImportCalendarEvents extends Command
         return (Carbon::parse($val, $tz))->format(EventInstance::DATE_TIME_FORMAT_DB);
     }
 
+    private function getWeekdayOfInstance(\Google\Service\Calendar\EventDateTime $value): string {
+        return (new DateTimeImmutable($this->unfuckDate($value)))->format('w');
+    }
+
     private function updateOrCreateEventInstance(string $eventId, $instance): ?string
     {
         /* @var Google\Service\Calendar\Event $instance */
         $instance_id = $instance->getId();
-
         $summary = $instance->getSummary();
 
         $city = $this->cityIdentifier->identifyCity(
@@ -194,8 +197,6 @@ class ImportCalendarEvents extends Command
             ])
         );
         try {
-
-
             $dbInstance = EventInstance::updateOrCreate(
                 [
                     'summary'                   => $summary,
@@ -217,6 +218,8 @@ class ImportCalendarEvents extends Command
                     'end_date_time'             => $this->unfuckDate($instance->getEnd()),
                     'start_date_time_offset'    => $this->getOffset($instance->getStart()),
                     'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                    'weekday'                   => $this->getWeekdayOfInstance($instance->getStart()),
+
                     'serialized'                => json_encode($instance),
                 ]
             );

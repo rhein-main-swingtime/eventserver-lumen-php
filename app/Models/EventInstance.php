@@ -91,9 +91,11 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
         'instance_id',
         'location',
         'start_date_time',
+        'weekday',
         'summary',
         'updated',
-        'foreign_url'
+        'foreign_url',
+        'serialized'
     ];
 
     protected $dates = [
