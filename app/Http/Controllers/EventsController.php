@@ -37,6 +37,7 @@ class EventsController extends Controller implements EventParameterInterface
         $cities = $request->input(self::PARAMETER_CITY);
         $calendars = $request->input(self::PARAMETER_CALENDAR);
         $categories = $request->input(self::PARAMETER_CATEGORY);
+        $weekdays = $request->input(self::PARAMETER_WEEKDAY);
 
         if (!$categories && !$calendars) {
             $categories = self::DEFAULT_CATEGORIES;
@@ -80,6 +81,10 @@ class EventsController extends Controller implements EventParameterInterface
 
         if (count($ids) > 0) {
             $query->whereIn('event_instances.id', $ids);
+        }
+
+        if (count($weekdays)) {
+            $query->whereIn('weekday', $weekdays);
         }
 
         $query->limit($limit);
