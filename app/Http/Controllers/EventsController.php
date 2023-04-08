@@ -83,7 +83,7 @@ class EventsController extends Controller implements EventParameterInterface
             $query->whereIn('event_instances.id', $ids);
         }
 
-        if (count($weekdays)) {
+        if (count($weekdays ?? [])) {
             $query->whereIn('weekday', $weekdays);
         }
 
