@@ -72,7 +72,7 @@ class EventsController extends Controller implements EventParameterInterface
         ;
 
         if ($endDate !== null) {
-            $query->whereDate('end_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB));
+            $query->whereDate('start_date_time', '<=', $endDate->format(EventInstance::DATE_TIME_FORMAT_DB));
         }
 
         if ($skip > 0) {
@@ -91,7 +91,9 @@ class EventsController extends Controller implements EventParameterInterface
 
         $query->orderBy('start_date_time', 'ASC');
 
-        return $query->get();
+        var_dump($query->get()->count()); die;
+
+        return $query->get()->count;
     }
 
     protected function getIdsFromSearchRequest(Request $request): ?array
@@ -137,6 +139,9 @@ class EventsController extends Controller implements EventParameterInterface
 
         $this->validateRequest($request);
         $danceEvents = $this->fetchEvents($request);
+
+        var_dump($danceEvents);
+
         $dates = $this->addDateMapping($danceEvents);
 
 

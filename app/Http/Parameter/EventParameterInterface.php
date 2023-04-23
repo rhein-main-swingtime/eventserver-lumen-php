@@ -39,7 +39,7 @@ interface EventParameterInterface
         self::PARAMETER_FROM            => 'date|',
         self::PARAMETER_LIMIT           => 'integer',
         self::PARAMETER_SKIP            => 'integer',
-        self::PARAMETER_TO              => 'date|after_or_equals:from',
+        self::PARAMETER_TO              => 'date',
         self::PARAMETER_QUERY           => 'string',
         self::PARAMETER_ID              => 'array',
         self::PARAMETER_ID.'.*'         => 'integer',
