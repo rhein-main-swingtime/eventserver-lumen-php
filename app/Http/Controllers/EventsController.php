@@ -91,8 +91,6 @@ class EventsController extends Controller implements EventParameterInterface
 
         $query->orderBy('start_date_time', 'ASC');
 
-        var_dump($query->get()->count()); die;
-
         return $query->get()->count;
     }
 
