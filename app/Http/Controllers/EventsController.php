@@ -137,11 +137,7 @@ class EventsController extends Controller implements EventParameterInterface
 
         $this->validateRequest($request);
         $danceEvents = $this->fetchEvents($request);
-
-        var_dump($danceEvents);
-
         $dates = $this->addDateMapping($danceEvents);
-
 
         return response()->json([
             'count' => [
