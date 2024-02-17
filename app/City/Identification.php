@@ -8,7 +8,6 @@ class Identification
     /** @var string[] */
     private array $locationRegexes;
 
-    /** @var string */
     private array $prefixes;
 
     public const KEY_PREFIXES = 'prefixes';

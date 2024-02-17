@@ -14,6 +14,7 @@ class CityIdentifier
     public const CITY_OFFENBACH     = 'Offenbach';
     public const CITY_RÜSSELSHEIM   = 'Rüsselsheim';
     public const CITY_WIESBADEN     = 'Wiesbaden';
+    public const CITY_MARBURG       = 'Marburg';
 
     public const MATCHING = [
         self::CITY_DARMSTADT => [
@@ -85,6 +86,14 @@ class CityIdentifier
                 '/wiesbaden/mi',
             ]
         ],
+        self::CITY_FRANKFURT => [
+            Identification::KEY_PREFIXES => [
+                'mr',
+            ],
+            Identification::KEY_REGEXES => [
+                '/marburg/mi',
+            ]
+        ],
     ];
 
     public static function getAvailableCities(): array
@@ -98,6 +107,7 @@ class CityIdentifier
             self::CITY_OFFENBACH,
             self::CITY_RÜSSELSHEIM,
             self::CITY_WIESBADEN,
+            self::CITY_MARBURG,
         ];
     }
 
