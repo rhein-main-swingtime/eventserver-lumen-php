@@ -86,7 +86,7 @@ class CityIdentifier
                 '/wiesbaden/mi',
             ]
         ],
-        self::CITY_FRANKFURT => [
+        self::CITY_MARBURG => [
             Identification::KEY_PREFIXES => [
                 'mr',
             ],
