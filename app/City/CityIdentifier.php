@@ -15,6 +15,7 @@ class CityIdentifier
     public const CITY_RÜSSELSHEIM   = 'Rüsselsheim';
     public const CITY_WIESBADEN     = 'Wiesbaden';
     public const CITY_MARBURG       = 'Marburg';
+    public const CITY_RODGAU        = 'Rodgau';
 
     public const MATCHING = [
         self::CITY_DARMSTADT => [
@@ -92,6 +93,14 @@ class CityIdentifier
             ],
             Identification::KEY_REGEXES => [
                 '/marburg/mi',
+            ]
+        ],
+        self::CITY_WIESBADEN => [
+            Identification::KEY_PREFIXES => [
+                'ro',
+            ],
+            Identification::KEY_REGEXES => [
+                '/rodgau/mi',
             ]
         ],
     ];
