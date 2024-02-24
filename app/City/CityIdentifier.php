@@ -95,7 +95,7 @@ class CityIdentifier
                 '/marburg/mi',
             ]
         ],
-        self::CITY_WIESBADEN => [
+        self::CITY_RODGAU => [
             Identification::KEY_PREFIXES => [
                 'ro',
             ],
