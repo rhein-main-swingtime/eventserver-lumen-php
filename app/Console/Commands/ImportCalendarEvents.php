@@ -108,29 +108,6 @@ class ImportCalendarEvents extends Command
             ->delete();
     }
 
-    protected function retrieveCity(string $location): string
-    {
-
-        $cities = [
-            'Darmstadt' => "darmsta(dt|tt|dd)",
-            'Frankfurt' => "frankfurt",
-            'Gießen' => "(G|g)ie(ss|ß)en",
-            'Mainz' => "mainz",
-            'Offenbach' => "offenbach",
-            'Rüsselsheim' => "r(ü|ue)(ss|ß)elsheim",
-        ];
-
-        foreach ($cities as $city => $regex) {
-            $found = preg_match('/' . $regex.'/mi', $location);
-
-            if ($found > 0) {
-                return $city;
-            }
-        }
-
-        return 'Andere';
-    }
-
     private function getCreator($event): string
     {
 
@@ -190,9 +167,9 @@ class ImportCalendarEvents extends Command
 
         $city = $this->cityIdentifier->identifyCity(
             $summary,
+            $instance->location ?? '',
             implode('\n', [
                 $instance->summary ?? '',
-                $instance->location ?? '',
                 $instance->description ?? ''
             ])
         );

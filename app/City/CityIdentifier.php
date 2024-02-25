@@ -130,7 +130,7 @@ class CityIdentifier
         }
     }
 
-    public function identifyCity(?string &$summary, string $longtext): string
+    public function identifyCity(?string &$summary, string $location, string $longtext): string
     {
         $fallback = 'Andere';
 
@@ -146,6 +146,13 @@ class CityIdentifier
             /** @var Identification $idenfifier */
             if ($idenfifier->doesPrefixMatch($prefix)) {
                 $summary = $parts[0];
+                return $cityName;
+            }
+        }
+
+        foreach ($this->identifications as $cityName => $idenfifier) {
+            /** @var Identification $idenfifier */
+            if ($idenfifier->doesLocationMatch($location)) {
                 return $cityName;
             }
         }
