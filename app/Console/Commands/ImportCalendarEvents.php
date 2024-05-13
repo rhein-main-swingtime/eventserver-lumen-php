@@ -362,7 +362,11 @@ class ImportCalendarEvents extends Command
     {
         Log::info('Event Import Started');
 
-        $result = $this->importAll();
+        try {
+            $result = $this->importAll();
+        } catch (\Exception $e) {
+            var_dump($e->getTrace());
+        }
         $status = $result['status'];
         $result = json_encode($result, JSON_PRETTY_PRINT);
 
