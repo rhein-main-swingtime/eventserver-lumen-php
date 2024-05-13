@@ -17,6 +17,7 @@ use Log;
 use Google\Service\Calendar;
 use Google\Service\Classroom\Form;
 use HtmlSanitizer\SanitizerInterface;
+use Illuminate\Support\Facades\Log as FacadesLog;
 
 /**
  * Class RouteList
@@ -27,6 +28,10 @@ class ImportCalendarEvents extends Command
 
     private const STATUS_ERROR = 'error';
     private const STATUS_SUCCESS = 'success';
+    private const GOOGLE_ERRORS = [
+        "Internal error encountered.",
+        "The service is currently unavailable.",
+    ];
 
     /**
      * The name and signature of the console command.
@@ -242,7 +247,15 @@ class ImportCalendarEvents extends Command
         ];
 
         foreach ($this->getSources() as $name => $data) {
-            $eventList = $this->googleCalendar->events->listEvents($data['id'], $parameters);
+            try {
+                $eventList = $this->googleCalendar->events->listEvents($data['id'], $parameters);
+            } catch (\Exception $e) {
+                if (in_array($e->getMessage(), self::GOOGLE_ERRORS)) {
+                    sleep(10);
+                    continue;
+                }
+            }
+
 
             foreach ($eventList as $event) {
                 if ($event->status === 'cancelled') {
