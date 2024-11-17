@@ -16,6 +16,7 @@ class CityIdentifier
     public const CITY_WIESBADEN     = 'Wiesbaden';
     public const CITY_MARBURG       = 'Marburg';
     public const CITY_RODGAU        = 'Rodgau';
+    public const CITY_BAD_KREUZNACH = 'Bad Kreuznach';
 
     public const MATCHING = [
         self::CITY_DARMSTADT => [
@@ -101,6 +102,14 @@ class CityIdentifier
             ],
             Identification::KEY_REGEXES => [
                 '/rodgau/mi',
+            ]
+        ],
+        self::CITY_BAD_KREUZNACH => [
+            Identification::KEY_PREFIXES => [
+                'kh'
+            ],
+            Identification::KEY_REGEXES => [
+                '/kreuznach/mi',
             ]
         ],
     ];
