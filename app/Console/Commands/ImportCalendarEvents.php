@@ -165,7 +165,7 @@ class ImportCalendarEvents extends Command
         return (new DateTimeImmutable($date))->format('w');
     }
 
-    private function isAllDay($instance): bool
+    private function isAllDay(\Google\Service\Calendar\Event $instance): bool
     {
         return $instance->getStart()->getDateTime() === null
             && $instance->getStart()->getDate() !== null;
