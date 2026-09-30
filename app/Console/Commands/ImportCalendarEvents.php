@@ -7,6 +7,7 @@
 namespace App\Console\Commands;
 
 use Carbon\Carbon;
+use App\Calendar\AllDaySplitter;
 use App\City\CityIdentifier;
 use Illuminate\Console\Command;
 use App\Models\EventInstance;
@@ -160,11 +161,23 @@ class ImportCalendarEvents extends Command
         return (Carbon::parse($val, $tz))->format(EventInstance::DATE_TIME_FORMAT_DB);
     }
 
-    private function getWeekdayOfInstance(\Google\Service\Calendar\EventDateTime $value): string {
-        return (new DateTimeImmutable($this->unfuckDate($value)))->format('w');
+    private function getWeekday(string $date): string {
+        return (new DateTimeImmutable($date))->format('w');
     }
 
-    private function updateOrCreateEventInstance(string $eventId, $instance): ?string
+    private function isAllDay($instance): bool
+    {
+        return $instance->getStart()->getDateTime() === null
+            && $instance->getStart()->getDate() !== null;
+    }
+
+    /**
+     * Stores an instance. All-day instances spanning multiple days are
+     * stored as one row per day.
+     *
+     * @return string[] IDs of the stored rows
+     */
+    private function updateOrCreateEventInstance(string $eventId, $instance): array
     {
         /* @var Google\Service\Calendar\Event $instance */
         $instance_id = $instance->getId();
@@ -178,38 +191,52 @@ class ImportCalendarEvents extends Command
                 $instance->description ?? ''
             ])
         );
-        try {
-            $dbInstance = EventInstance::updateOrCreate(
-                [
-                    'summary'                   => $summary,
-                    'start_date_time'           => $this->unfuckDate($instance->getStart()),
-                    'end_date_time'             => $this->unfuckDate($instance->getEnd()),
-                    'instance_id'               => $instance_id,
-                ],
-                [
-                    'instance_id'               => $instance_id,
-                    'event_id'                  => $eventId,
-                    'summary'                   => $summary,
-                    'description'               => $this->getSanitizedDesc(
-                        $instance->getDescription() ?? ''
-                    ),
-                    'location'                  => $instance->getLocation(),
-                    'city'                      => $city,
-                    'foreign_url'               => $instance->htmlLink,
-                    'start_date_time'           => $this->unfuckDate($instance->getStart()),
-                    'end_date_time'             => $this->unfuckDate($instance->getEnd()),
-                    'start_date_time_offset'    => $this->getOffset($instance->getStart()),
-                    'end_date_time_offset'      => $this->getOffset($instance->getStart()),
-                    'weekday'                   => $this->getWeekdayOfInstance($instance->getStart()),
 
-                    'serialized'                => json_encode($instance),
-                ]
-            );
-            return $dbInstance->id;
-        } catch (\Exception $e) {
-            Log::error($e->getMessage());
-            return null;
+        $start = $this->unfuckDate($instance->getStart());
+        $end = $this->unfuckDate($instance->getEnd());
+
+        $segments = $this->isAllDay($instance)
+            ? AllDaySplitter::split($start, $end)
+            : [['start' => $start, 'end' => $end, 'day_number' => null, 'day_count' => null]];
+
+        $ids = [];
+        foreach ($segments as $segment) {
+            try {
+                $dbInstance = EventInstance::updateOrCreate(
+                    [
+                        'summary'                   => $summary,
+                        'start_date_time'           => $segment['start'],
+                        'end_date_time'             => $segment['end'],
+                        'instance_id'               => $instance_id,
+                    ],
+                    [
+                        'instance_id'               => $instance_id,
+                        'event_id'                  => $eventId,
+                        'summary'                   => $summary,
+                        'description'               => $this->getSanitizedDesc(
+                            $instance->getDescription() ?? ''
+                        ),
+                        'location'                  => $instance->getLocation(),
+                        'city'                      => $city,
+                        'foreign_url'               => $instance->htmlLink,
+                        'start_date_time'           => $segment['start'],
+                        'end_date_time'             => $segment['end'],
+                        'start_date_time_offset'    => $this->getOffset($instance->getStart()),
+                        'end_date_time_offset'      => $this->getOffset($instance->getStart()),
+                        'weekday'                   => $this->getWeekday($segment['start']),
+                        'day_number'                => $segment['day_number'],
+                        'day_count'                 => $segment['day_count'],
+
+                        'serialized'                => json_encode($instance),
+                    ]
+                );
+                $ids[] = $dbInstance->id;
+            } catch (\Exception $e) {
+                Log::error($e->getMessage());
+            }
         }
+
+        return $ids;
     }
 
     /**
@@ -313,11 +340,17 @@ class ImportCalendarEvents extends Command
                 $instanceItems =  $instances->getItems();
 
                 if (count($instanceItems) === 0) {
-                    $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $event);
+                    $updatedInstanceIDs = array_merge(
+                        $updatedInstanceIDs,
+                        $this->updateOrCreateEventInstance($eventId, $event)
+                    );
                 } else {
                     foreach ($instanceItems as $instance) {
                         try {
-                            $updatedInstanceIDs[] = $this->updateOrCreateEventInstance($eventId, $instance);
+                            $updatedInstanceIDs = array_merge(
+                                $updatedInstanceIDs,
+                                $this->updateOrCreateEventInstance($eventId, $instance)
+                            );
                             $updated['instances']++;
                         } catch (\Exception $e) {
                             $errors[] = $eventId;
