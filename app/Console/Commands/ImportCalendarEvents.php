@@ -192,12 +192,17 @@ class ImportCalendarEvents extends Command
             ])
         );
 
-        $start = $this->unfuckDate($instance->getStart());
-        $end = $this->unfuckDate($instance->getEnd());
+        try {
+            $start = $this->unfuckDate($instance->getStart());
+            $end = $this->unfuckDate($instance->getEnd());
 
-        $segments = $this->isAllDay($instance)
-            ? AllDaySplitter::split($start, $end)
-            : [['start' => $start, 'end' => $end, 'day_number' => null, 'day_count' => null]];
+            $segments = $this->isAllDay($instance)
+                ? AllDaySplitter::split($start, $end)
+                : [['start' => $start, 'end' => $end, 'day_number' => null, 'day_count' => null]];
+        } catch (\Exception $e) {
+            Log::error($e->getMessage());
+            return [];
+        }
 
         $ids = [];
         foreach ($segments as $segment) {

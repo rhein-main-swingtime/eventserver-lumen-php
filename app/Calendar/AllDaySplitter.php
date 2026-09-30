@@ -17,8 +17,9 @@ class AllDaySplitter
      */
     public static function split(string $start, string $end): array
     {
-        $startDay = CarbonImmutable::parse($start)->startOfDay();
-        $endDay = CarbonImmutable::parse($end)->startOfDay();
+        // Pure date arithmetic, UTC avoids DST gaps at midnight
+        $startDay = CarbonImmutable::parse($start, 'UTC')->startOfDay();
+        $endDay = CarbonImmutable::parse($end, 'UTC')->startOfDay();
         $dayCount = (int) $startDay->diffInDays($endDay);
 
         if ($dayCount <= 1) {

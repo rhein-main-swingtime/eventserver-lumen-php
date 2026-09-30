@@ -102,6 +102,11 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
         'serialized'
     ];
 
+    protected $casts = [
+        'day_number' => 'integer',
+        'day_count' => 'integer',
+    ];
+
     protected $dates = [
         'start_date_time',
         'end_date_time',
