@@ -52,6 +52,8 @@ use phpDocumentor\Reflection\DocBlock\Tags\Formatter;
  * @property string $end_date_time
  * @property string $event_id
  * @property string|null $instance_id
+ * @property int|null $day_number
+ * @property int|null $day_count
  * @method static \Illuminate\Database\Eloquent\Builder|EventInstance whereEventId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|EventInstance whereInstanceId($value)
  */
@@ -92,10 +94,17 @@ class EventInstance extends Model implements AuthenticatableContract, Authorizab
         'location',
         'start_date_time',
         'weekday',
+        'day_number',
+        'day_count',
         'summary',
         'updated',
         'foreign_url',
         'serialized'
+    ];
+
+    protected $casts = [
+        'day_number' => 'integer',
+        'day_count' => 'integer',
     ];
 
     protected $dates = [
